@@ -10,7 +10,7 @@ import {
 
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { navigation } from '@/Routes/navigation';
+import { navigation } from '@/routes/navigation';
 
 
 export function Sidebar() {
