@@ -1,4 +1,4 @@
-import type { EstadoTrabajo, EstadoSeguro, TipoTrabajo } from '../../types';
+import type { EstadoTrabajo, TipoTrabajo } from '@/types';
 import { Badge } from '../ui/badge';
 
 interface EstadoBadgeProps {
@@ -35,20 +35,3 @@ export function TipoBadge({ tipo }: TipoBadgeProps) {
   );
 }
 
-interface SeguroBadgeProps {
-  estado: EstadoSeguro;
-}
-
-export function SeguroBadge({ estado }: SeguroBadgeProps) {
-  const variants: Record<EstadoSeguro, string> = {
-    'Pendiente': 'bg-yellow-500 hover:bg-yellow-600',
-    'Aprobado': 'bg-green-500 hover:bg-green-600',
-    'Rechazado': 'bg-red-500 hover:bg-red-600',
-  };
-
-  return (
-    <Badge className={variants[estado]}>
-      {estado}
-    </Badge>
-  );
-}
