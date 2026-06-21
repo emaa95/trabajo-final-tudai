@@ -1,108 +1,34 @@
-import { useEffect, useState } from 'react';
-
-import type { Empleado } from '@/types';
-
-import {
-  getEmpleados,
-  crearEmpleado as crearEmpleadoService,
-  actualizarEmpleado as actualizarEmpleadoService,
-} from '@/services/empleadosService';
+// src/hooks/useEmpleados.ts
+import { useEmpleadoStore } from "@/store/empleadoStore";
 
 export function useEmpleados() {
-  const [empleados, setEmpleados] = useState<
-    Empleado[]
-  >([]);
+  const empleados = useEmpleadoStore((s) => s.empleados);
+  const empleadoSeleccionado = useEmpleadoStore((s) => s.empleadoSeleccionado);
+  const loading = useEmpleadoStore((s) => s.loading);
+  const error = useEmpleadoStore((s) => s.error);
 
-  const [loading, setLoading] =
-    useState(true);
+  const fetchEmpleados = useEmpleadoStore((s) => s.fetchEmpleados);
+  const setEmpleadoSeleccionado = useEmpleadoStore(
+    (s) => s.setEmpleadoSeleccionado
+  );
+  const clearError = useEmpleadoStore((s) => s.clearError);
 
-  const [error, setError] =
-    useState<string | null>(null);
-
-  useEffect(() => {
-    cargarEmpleados();
-  }, []);
-
-  async function cargarEmpleados() {
-    try {
-      setLoading(true);
-
-      const data = await getEmpleados();
-
-      setEmpleados(data);
-    } catch (err) {
-      console.error(err);
-
-      setError(
-        'Error cargando empleados'
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function crearEmpleado(
-    payload: Omit<Empleado, 'id'>
-  ) {
-    const nuevo =
-      await crearEmpleadoService(payload);
-
-    setEmpleados((prev) => [
-      ...prev,
-      nuevo,
-    ]);
-
-    return nuevo;
-  }
-
-  async function actualizarEmpleado(
-    id: string,
-    payload: Partial<Empleado>
-  ) {
-    const actualizado =
-      await actualizarEmpleadoService(
-        id,
-        payload
-      );
-
-    setEmpleados((prev) =>
-      prev.map((e) =>
-        e.id === id ? actualizado : e
-      )
-    );
-
-    return actualizado;
-  }
-
-  async function toggleEmpleadoActivo(
-    id: string,
-    activo: boolean
-  ) {
-    const actualizado =
-      await actualizarEmpleadoService(
-        id,
-        { activo }
-      );
-
-    setEmpleados((prev) =>
-      prev.map((e) =>
-        e.id === id ? actualizado : e
-      )
-    );
-
-    return actualizado;
-  }
+  const addEmpleado = useEmpleadoStore((s) => s.addEmpleado);
+  const editEmpleado = useEmpleadoStore((s) => s.editEmpleado);
+  const toggleActivo = useEmpleadoStore((s) => s.toggleActivo);
 
   return {
     empleados,
-
+    empleadoSeleccionado,
     loading,
     error,
 
-    crearEmpleado,
-    actualizarEmpleado,
-    toggleEmpleadoActivo,
+    fetchEmpleados,
+    setEmpleadoSeleccionado,
+    clearError,
 
-    reload: cargarEmpleados,
+    addEmpleado,
+    editEmpleado,
+    toggleActivo,
   };
 }
