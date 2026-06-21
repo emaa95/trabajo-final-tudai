@@ -121,6 +121,10 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+.theme-cliente {
+  --primary: oklch(0.585 0.233 277.117);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
