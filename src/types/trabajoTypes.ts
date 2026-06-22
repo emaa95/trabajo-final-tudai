@@ -215,6 +215,23 @@ export interface SeccionGeneralProps {
     empleadoId: string | null
   ) => void;
 }
+
+export interface SeccionDescripcionProps {
+  descripcionDano: string;
+  notas: string;
+  error?: string;
+  onDescripcionChange: (value: string) => void;
+  onNotasChange: (value: string) => void;
+}
+
+export interface SeccionServiciosSolicitadosProps {
+  trabajosSolicitados: TrabajoSolicitado[];
+  otroTrabajo: string;
+  error?: string;
+  onTrabajosChange: (value: TrabajoSolicitado[]) => void;
+  onOtroTrabajoChange: (value: string) => void;
+}
+
 export interface TrabajoDetalle {
   id: string;
   estado: EstadoTrabajo;

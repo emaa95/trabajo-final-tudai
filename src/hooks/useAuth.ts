@@ -55,9 +55,8 @@ export function useAuth() {
 
     initializeAuth();
 
-    // 🔥 LISTENER REAL DE SUPABASE
     const { data } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (_event, session) => {
         setAuthUser(session?.user ?? null);
 
         if (!session?.user) {
