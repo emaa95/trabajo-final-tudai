@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useClientes } from "@/hooks/useClientes";
-import type { ModalClienteProps } from "@/types";
+import type { ModalClienteProps, Cliente } from "@/types";
 
 import { Plus, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -44,10 +44,6 @@ export function ModalCliente({
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
 
-  // ─────────────────────────────
-  // RESET automático cuando se cierra
-  // evita estados colgados al volver de pestaña
-  // ─────────────────────────────
   useEffect(() => {
     if (!open) {
       setLoading(false);
@@ -56,9 +52,6 @@ export function ModalCliente({
     }
   }, [open]);
 
-  // ─────────────────────────────
-  // Reset form
-  // ─────────────────────────────
   const resetForm = () => {
     setNombre("");
     setApellido("");
@@ -92,7 +85,8 @@ export function ModalCliente({
     setLoading(true);
 
     try {
-      await addCliente({
+      // 🔴 IMPORTANTE: necesitamos que addCliente devuelva el cliente creado
+      const clienteCreado: Cliente = await addCliente({
         nombre: nombre.trim(),
         apellido: apellido.trim(),
         telefono: telefono.trim() || undefined,
@@ -103,11 +97,10 @@ export function ModalCliente({
       });
 
       resetForm();
-
-      // cerrar primero para evitar estado visual colgado
       onClose();
 
-      await onCreated?.();
+      // ✅ ahora sí: pasamos el cliente al padre
+      onCreated?.(clienteCreado);
     } catch (err) {
       console.error(err);
     } finally {
@@ -200,7 +193,7 @@ export function ModalCliente({
             <select
               value={tipoDocumento}
               onChange={(e) =>
-                setTipoDocumento(e.target.value as any)
+                setTipoDocumento(e.target.value as "DNI" | "CUIL" | "CUIT")
               }
               className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm"
             >
@@ -228,11 +221,7 @@ export function ModalCliente({
         </div>
 
         <DialogFooter className="gap-2">
-          <Button
-            variant="outline"
-            onClick={handleClose}
-            disabled={loading}
-          >
+          <Button variant="outline" onClick={handleClose} disabled={loading}>
             Cancelar
           </Button>
 

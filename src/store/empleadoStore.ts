@@ -56,7 +56,7 @@ interface EmpleadoStore {
   clearError: () => void;
 }
 
-export const useEmpleadoStore = create<EmpleadoStore>((set, get) => ({
+export const useEmpleadoStore = create<EmpleadoStore>((set) => ({
   empleados: [],
 
   empleadoSeleccionado: null,

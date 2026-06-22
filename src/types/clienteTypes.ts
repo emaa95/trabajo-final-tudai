@@ -60,5 +60,5 @@ export interface SeccionClienteProps {
 export interface ModalClienteProps {
   open: boolean;
   onClose: () => void;
-  onCreated: () => void;
+  onCreated: (cliente: Cliente) => void;
 }

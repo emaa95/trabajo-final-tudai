@@ -125,7 +125,7 @@ export interface CreateTrabajoPayload {
 
   asignado_a?: string;
 
-  taller_id: string;
+  taller_id?: string;
 }
 
 export interface FormErrors {

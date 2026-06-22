@@ -45,7 +45,7 @@ interface AseguradoraStore {
   clearError: () => void;
 }
 
-export const aseguradoraStore = create<AseguradoraStore>((set, get) => ({
+export const aseguradoraStore = create<AseguradoraStore>((set) => ({
   aseguradoras: [],
 
   aseguradoraSeleccionada: null,

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   TIPOS_ACEITE, REPUESTOS_SERVICE,
   type TipoAceite, type RepuestoService,
-  type SeccionControlServiceProps,
+  type SeccionServiceProps,
 } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -24,7 +24,7 @@ export function SeccionControlService({
   onOtrosRepuestosChange,
   onProximoServiceKmChange,
   onProximoServiceFechaChange,
-}: SeccionControlServiceProps) {
+}: SeccionServiceProps) {
   const [habilitado, setHabilitado] = useState(false);
 
   const toggleRepuesto = (repuesto: RepuestoService) => {

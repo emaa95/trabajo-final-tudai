@@ -383,6 +383,7 @@ export function TrabajoFormV2() {
               setProximoServiceKm={setProximoServiceKm}
               setProximoServiceFecha={setProximoServiceFecha}
               setTrabajosSolicitados={setTrabajosSolicitados}
+              setKilometrajeActual={setKilometrajeActual}
               setOtroTrabajo={setOtroTrabajo}
               setTareas={setTareas}
               setNotas={setNotas}
