@@ -13,6 +13,7 @@ export interface Aseguradora {
   cuit?: string;
 
   activa: boolean;
+  created_at: string;
 }
 
 export interface CreateAseguradoraDto {

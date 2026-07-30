@@ -1,146 +1,229 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from "react";
 
-import { Card, CardContent } from '../components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../components/ui/table';
-import { Button } from '../components/ui/button';
-import { Plus, Shield } from 'lucide-react';
+import { Button } from "@/components/ui/button";
 
-import { useAseguradoras } from '@/hooks/useAseguradoras';
-import { ModalAseguradora } from '../components/modals/ModalAseguradora';
+import { Plus, Shield, ShieldCheck, ShieldOff } from "lucide-react";
+
+import { sileo } from "sileo";
+
+import { PageHeader } from "@/components/common/PageHeader";
+import { StatsGrid } from "@/components/common/StatsGrid";
+import { StatCard } from "@/components/common/StatCard";
+import { DataFilters } from "@/components/common/DataFilters";
+import { DataTable } from "@/components/common/DataTable";
+
+import { useDataFilters } from "@/hooks/useDataFilters";
+import { useAseguradoras } from "@/hooks/useAseguradoras";
+
+import { createAseguradoraColumns } from "@/components/aseguradoras/AseguradoraColumns";
+
+import { ModalAseguradora } from "@/components/modals/ModalAseguradora";
+
+const SORT_OPTIONS = [
+  {
+    value: "nombre",
+    label: "Nombre A–Z",
+  },
+  {
+    value: "reciente",
+    label: "Más reciente",
+  },
+];
+
+const FILTER_GROUPS = [
+  {
+    id: "estado",
+    options: [
+      {
+        value: "todas",
+        label: "Todas",
+      },
+      {
+        value: "activas",
+        label: "Activas",
+      },
+      {
+        value: "inactivas",
+        label: "Inactivas",
+      },
+    ],
+  },
+];
 
 export function Seguros() {
-  const {
-    aseguradoras,
-    fetchAseguradoras,
-  } = useAseguradoras();
+  const { aseguradoras, fetchAseguradoras, loading, error } = useAseguradoras();
 
   const [open, setOpen] = useState(false);
 
-  // ─────────────────────────────
-  // Load estable (evita doble fetch / race conditions)
-  // ─────────────────────────────
+  const { search, sortBy, activeFilters, filterProps } = useDataFilters({
+    defaultSort: "nombre",
+    defaultFilters: {
+      estado: "todas",
+    },
+  });
+
   useEffect(() => {
-    let alive = true;
+    fetchAseguradoras();
+  }, [fetchAseguradoras]);
 
-    const load = async () => {
-      await fetchAseguradoras();
+  useEffect(() => {
+    if (error) {
+      sileo.error({
+        title: "Error al cargar aseguradoras",
+        description: error,
+      });
+    }
+  }, [error]);
 
-      if (!alive) return;
-    };
+  const columns = useMemo(
+    () =>
+      createAseguradoraColumns({
+        onVerDetalle: (aseguradora) => {
+          console.log("ver detalle", aseguradora);
+        },
 
-    load();
+        onEditar: (aseguradora) => {
+          console.log("editar", aseguradora);
+        },
 
-    return () => {
-      alive = false;
-    };
-  }, []);
+        onCambiarEstado: (aseguradora) => {
+          console.log("cambiar estado", aseguradora);
+        },
+      }),
 
-  // ─────────────────────────────
-  // Render
-  // ─────────────────────────────
+    [],
+  );
+
+  const activas = useMemo(
+    () => aseguradoras.filter((a) => a.activa).length,
+
+    [aseguradoras],
+  );
+
+  const inactivas = useMemo(
+    () => aseguradoras.filter((a) => !a.activa).length,
+
+    [aseguradoras],
+  );
+
+  const creadasEsteMes = useMemo(() => {
+    const now = new Date();
+
+    return aseguradoras.filter((aseguradora) => {
+      const fecha = new Date(aseguradora.created_at);
+
+      return (
+        fecha.getMonth() === now.getMonth() &&
+        fecha.getFullYear() === now.getFullYear()
+      );
+    }).length;
+  }, [aseguradoras]);
+
+  const filteredAseguradoras = useMemo(() => {
+    const q = search.toLowerCase();
+
+    let result = aseguradoras.filter(
+      (aseguradora) =>
+        aseguradora.nombre.toLowerCase().includes(q) ||
+        (aseguradora.cuit ?? "").toLowerCase().includes(q) ||
+        (aseguradora.telefono ?? "").toLowerCase().includes(q),
+    );
+
+    const estado = activeFilters.estado ?? "todas";
+
+    if (estado === "activas") {
+      result = result.filter((a) => a.activa);
+    }
+
+    if (estado === "inactivas") {
+      result = result.filter((a) => !a.activa);
+    }
+
+    if (sortBy === "nombre") {
+      result.sort((a, b) => a.nombre.localeCompare(b.nombre));
+    }
+
+    if (sortBy === "reciente") {
+      result.sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
+    }
+
+    return result;
+  }, [aseguradoras, search, sortBy, activeFilters]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <p className="text-muted-foreground">Cargando aseguradoras...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <>
+      <div className="space-y-5">
+        <PageHeader
+          title="Compañías de Seguros"
+          description="Gestión de aseguradoras del taller"
+          actions={
+            <Button onClick={() => setOpen(true)}>
+              <Plus className="mr-2 size-4" />
+              Nueva Aseguradora
+            </Button>
+          }
+        />
 
-      {/* HEADER */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <StatsGrid>
+          <StatCard
+            icon={<Shield className="size-5" />}
+            iconClass="theme-seguro bg-primary/10 text-primary"
+            label="Aseguradoras"
+            value={aseguradoras.length}
+            footer={`+${creadasEsteMes} este mes`}
+          />
 
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">
-            Compañías de Seguros
-          </h1>
+          <StatCard
+            icon={<ShieldCheck className="size-5" />}
+            iconClass="bg-green-100 text-green-700"
+            label="Activas"
+            value={activas}
+            footer="Disponibles para trabajos"
+          />
 
-          <p className="text-slate-600 mt-1">
-            {aseguradoras.length} aseguradoras registradas
-          </p>
-        </div>
+          <StatCard
+            icon={<ShieldOff className="size-5" />}
+            iconClass="bg-amber-100 text-amber-700"
+            label="Inactivas"
+            value={inactivas}
+            footer={`${Math.round(
+              aseguradoras.length ? (inactivas / aseguradoras.length) * 100 : 0,
+            )}% del total`}
+            trend="neutral"
+          />
+        </StatsGrid>
 
-        <Button
-          className="w-full lg:w-auto"
-          onClick={() => setOpen(true)}
-        >
-          <Plus className="size-4 mr-2" />
-          Nueva Aseguradora
-        </Button>
+        <DataFilters
+          {...filterProps}
+          searchPlaceholder="Buscar por nombre, CUIT o teléfono..."
+          sortOptions={SORT_OPTIONS}
+          filterGroups={FILTER_GROUPS}
+        />
 
+        <DataTable
+          data={filteredAseguradoras}
+          columns={columns}
+          getRowKey={(aseguradora) => aseguradora.id}
+          loading={loading}
+          headerColorClass="theme-seguro text-primary"
+          emptyTitle="No hay aseguradoras registradas"
+          emptyDescription="Intentá con otra búsqueda o agregá una nueva aseguradora."
+          emptyIcon={<Shield className="size-14 text-slate-300" />}
+        />
       </div>
 
-      {/* TABLA */}
-      <Card>
-        <CardContent className="p-0">
-
-          <div className="overflow-x-auto">
-
-            <Table>
-
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>CUIT</TableHead>
-                  <TableHead>Contacto</TableHead>
-                </TableRow>
-              </TableHeader>
-
-              <TableBody>
-                {aseguradoras.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center text-slate-500 py-6">
-                      No hay aseguradoras registradas
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  aseguradoras.map((a) => (
-                    <TableRow key={a.id}>
-
-                      <TableCell className="font-mono text-slate-500">
-                        #{a.id.slice(0, 6)}
-                      </TableCell>
-
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Shield className="size-5 text-blue-600" />
-                          <span className="font-semibold">
-                            {a.nombre}
-                          </span>
-                        </div>
-                      </TableCell>
-
-                      <TableCell>
-                        {a.cuit ?? '-'}
-                      </TableCell>
-
-                      <TableCell>
-                        <div className="text-sm text-slate-600">
-                          {a.telefono && <div>{a.telefono}</div>}
-                          {a.email && <div>{a.email}</div>}
-                        </div>
-                      </TableCell>
-
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-
-            </Table>
-
-          </div>
-
-        </CardContent>
-      </Card>
-
-      {/* MODAL */}
-      <ModalAseguradora
-        open={open}
-        onClose={() => setOpen(false)}
-      />
-
-    </div>
+      <ModalAseguradora open={open} onClose={() => setOpen(false)} />
+    </>
   );
 }
