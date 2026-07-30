@@ -1,4 +1,6 @@
-import { User } from "lucide-react";
+import { User, Eye, Pencil, Trash2 } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 
 import type { Vehiculo } from "@/types";
 import type { DataTableColumn } from "@/components/common/DataTable";
@@ -6,11 +8,15 @@ import type { DataTableColumn } from "@/components/common/DataTable";
 interface CreateVehiculoColumnsProps {
   clientesMap: Record<string, string>;
   onVerDetalle?: (vehiculo: Vehiculo) => void;
+  onEditar?: (vehiculo: Vehiculo) => void;
+  onEliminar?: (vehiculo: Vehiculo) => void;
 }
 
 export function createVehiculoColumns({
   clientesMap,
   onVerDetalle,
+  onEditar,
+  onEliminar,
 }: CreateVehiculoColumnsProps): DataTableColumn<Vehiculo>[] {
   return [
     {
@@ -59,13 +65,33 @@ export function createVehiculoColumns({
       header: "Acciones",
 
       render: (vehiculo) => (
-        <div className="flex justify-end">
-          <button
-            className="text-sm text-blue-600 hover:underline"
+        <div className="flex items-center justify-center gap-1">
+          <Button
+            size="icon"
+            variant="ghost"
+            title="Ver detalles"
             onClick={() => onVerDetalle?.(vehiculo)}
           >
-            Ver detalles
-          </button>
+            <Eye className="size-4 text-slate-600" />
+          </Button>
+
+          <Button
+            size="icon"
+            variant="ghost"
+            title="Editar vehículo"
+            onClick={() => onEditar?.(vehiculo)}
+          >
+            <Pencil className="size-4 text-slate-600" />
+          </Button>
+
+          <Button
+            size="icon"
+            variant="ghost"
+            title="Eliminar vehículo"
+            onClick={() => onEliminar?.(vehiculo)}
+          >
+            <Trash2 className="size-4 text-red-600" />
+          </Button>
         </div>
       ),
     },

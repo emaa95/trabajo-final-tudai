@@ -60,6 +60,18 @@ loading?: boolean;
 export interface ModalVehiculoProps {
   open: boolean;
   clientes: Cliente[];
+ 
+  // Si se pasa, el modal entra en modo edición y precarga el formulario.
+  vehiculo?: Vehiculo | null;
+ 
   onClose: () => void;
-  onCreated: (vehiculo: Vehiculo) => void;
+ 
+  // Modo creación: el modal arma el DTO, el padre hace el alta.
+  onCreated: (dto: CreateVehiculoDto) => void | Promise<void>;
+ 
+  // Modo edición: el modal arma el DTO, el padre hace el update.
+  onUpdated?: (
+    id: string,
+    dto: UpdateVehiculoDto,
+  ) => void | Promise<void>;
 }

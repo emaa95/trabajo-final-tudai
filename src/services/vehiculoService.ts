@@ -126,13 +126,24 @@ export async function actualizarVehiculo(
 // ======================================================
 
 export async function eliminarVehiculo(id: string): Promise<void> {
-  if (!id) throw new Error("El ID del vehículo es obligatorio");
+  if (!id) {
+    throw new Error("El ID del vehículo es obligatorio");
+  }
 
-  const { error } = await deleteVehiculo(id);
+  const { data, error } = await deleteVehiculo(id);
+
+  console.log("[DELETE VEHICULO RESPONSE]", {
+    data,
+    error,
+  });
 
   if (error) {
     console.error("[VEHICULOS_SERVICE][DELETE]", error);
     manejarErrorSupabase(error);
+  }
+
+  if (!data) {
+    throw new Error("No se encontró el vehículo a eliminar");
   }
 }
 

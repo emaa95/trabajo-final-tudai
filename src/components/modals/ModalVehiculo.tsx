@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 
 import type {
   Cliente,
+  CreateVehiculoDto,
   ModalVehiculoProps,
-  Vehiculo,
+  UpdateVehiculoDto,
 } from "@/types";
 
-import { Car, Plus } from "lucide-react";
+import { Car, Pencil, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -21,7 +22,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { FieldError } from "../forms/nuevoTrabajo/FieldError";
-import { useVehiculos } from "@/hooks/useVehiculos";
 
 const inputStyles =
   "transition-all focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2";
@@ -40,9 +40,12 @@ interface Props extends ModalVehiculoProps {
 export function ModalVehiculo({
   open,
   clientes,
+  vehiculo,
   onClose,
+  onCreated,
+  onUpdated,
 }: Props) {
-  const { addVehiculo } = useVehiculos();
+  const isEditing = !!vehiculo;
 
   const [clienteId, setClienteId] = useState("");
   const [patente, setPatente] = useState("");
@@ -55,16 +58,30 @@ export function ModalVehiculo({
   const [errors, setErrors] = useState<FormErrors>({});
 
   // ─────────────────────────────
-  // Reset automático cuando se abre/cierra modal
-  // evita estados colgados tras tab switch
+  // Reset / precarga cuando cambia qué se está editando
+  // o cuando se abre/cierra el modal
   // ─────────────────────────────
   useEffect(() => {
     if (!open) {
       setLoading(false);
       resetForm();
       setErrors({});
+      return;
     }
-  }, [open]);
+
+    if (vehiculo) {
+      setClienteId(vehiculo.cliente_id ?? "");
+      setPatente(vehiculo.patente ?? "");
+      setMarca(vehiculo.marca ?? "");
+      setModelo(vehiculo.modelo ?? "");
+      setAnio(vehiculo.anio ? String(vehiculo.anio) : "");
+      setColor(vehiculo.color ?? "");
+    } else {
+      resetForm();
+    }
+
+    setErrors({});
+  }, [open, vehiculo]);
 
   const resetForm = () => {
     setClienteId("");
@@ -73,7 +90,6 @@ export function ModalVehiculo({
     setModelo("");
     setAnio("");
     setColor("");
-    setErrors({});
   };
 
   const handleClose = () => {
@@ -82,9 +98,6 @@ export function ModalVehiculo({
     onClose();
   };
 
-  // ─────────────────────────────
-  // SAVE (CORREGIDO: async + await + control de flujo)
-  // ─────────────────────────────
   const handleSave = async () => {
     const newErrors: FormErrors = {};
 
@@ -101,23 +114,42 @@ export function ModalVehiculo({
     setLoading(true);
 
     try {
-      const vehiculo: Vehiculo = {
-        id: crypto.randomUUID(),
-        patente: patente.trim().toUpperCase(),
-        marca: marca.trim(),
-        modelo: modelo.trim(),
-        anio: anio ? Number(anio) : null,
-        color: color.trim() || null,
-        cliente_id: clienteId,
-        created_at: new Date().toISOString(),
-      };
+      if (isEditing && vehiculo) {
+        const dto: UpdateVehiculoDto = {
+          patente: patente.trim().toUpperCase(),
+          marca: marca.trim(),
+          modelo: modelo.trim(),
+          anio: anio ? Number(anio) : undefined,
+          color: color.trim() || undefined,
+          cliente_id: clienteId,
+        };
 
-      await addVehiculo(vehiculo);
+        await onUpdated?.(vehiculo.id, dto);
+      } else {
+        const dto: CreateVehiculoDto = {
+          patente: patente.trim().toUpperCase(),
+          marca: marca.trim(),
+          modelo: modelo.trim(),
+          anio: anio ? Number(anio) : undefined,
+          color: color.trim() || undefined,
+          cliente_id: clienteId,
+          // TODO: taller_id es requerido por CreateVehiculoDto pero este
+          // formulario no lo captura. Completar según de dónde salga
+          // (contexto de sesión, prop del modal, etc.).
+          taller_id: "",
+        };
 
-      resetForm();
+        await onCreated(dto);
+      }
+
       handleClose();
     } catch (err) {
-      console.error("Error creando vehículo:", err);
+      console.error(
+        isEditing
+          ? "Error actualizando vehículo:"
+          : "Error creando vehículo:",
+        err,
+      );
     } finally {
       setLoading(false);
     }
@@ -142,11 +174,26 @@ export function ModalVehiculo({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="
+    sm:max-w-md
+    duration-300
+    data-[state=open]:animate-in
+    data-[state=closed]:animate-out
+    data-[state=open]:fade-in-0
+    data-[state=closed]:fade-out-0
+    data-[state=open]:zoom-in-[98%]
+    data-[state=closed]:zoom-out-[98%]
+    data-[state=open]:slide-in-from-top-[48%]
+    data-[state=closed]:slide-out-to-top-[48%]
+  ">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Car className="size-4" />
-            Nuevo vehículo
+            {isEditing ? (
+              <Pencil className="size-4" />
+            ) : (
+              <Car className="size-4" />
+            )}
+            {isEditing ? "Editar vehículo" : "Nuevo vehículo"}
           </DialogTitle>
         </DialogHeader>
 
@@ -230,8 +277,18 @@ export function ModalVehiculo({
           </Button>
 
           <Button onClick={handleSave} disabled={loading}>
-            <Plus className="mr-2 size-4" />
-            {loading ? "Creando..." : "Crear vehículo"}
+            {isEditing ? (
+              <Pencil className="mr-2 size-4" />
+            ) : (
+              <Plus className="mr-2 size-4" />
+            )}
+            {loading
+              ? isEditing
+                ? "Guardando..."
+                : "Creando..."
+              : isEditing
+                ? "Guardar cambios"
+                : "Crear vehículo"}
           </Button>
         </DialogFooter>
       </DialogContent>

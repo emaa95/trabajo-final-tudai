@@ -19,7 +19,10 @@ export function findAllVehiculos() {
 export function findVehiculoById(id: string) {
   return supabase
     .from('VEHICULOS')
-    .select('*')
+    .select(`
+      *,
+      CLIENTES(*)
+    `)
     .eq('id', id)
     .single();
 }
@@ -58,9 +61,11 @@ export function updateVehiculo(
 
 export function deleteVehiculo(id: string) {
   return supabase
-    .from('VEHICULOS')
+    .from("VEHICULOS")
     .delete()
-    .eq('id', id);
+    .eq("id", id)
+    .select()
+    .single();
 }
 
 export function findVehiculosByCliente(clienteId: string) {
