@@ -7,3 +7,4 @@ export * from './trabajoTypes';
 export * from './serviceTypes';
 export * from './recepcionTypes';
 export * from './tallerTypes';
+export * from './tareaTypes';
