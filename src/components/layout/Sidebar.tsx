@@ -195,10 +195,28 @@ export function Sidebar() {
                 </div>
 
                 <div className="p-1">
-                  <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
-                    <UserCog className="size-4" />
-                    Mi Perfil
-                  </button>
+                  <NavLink
+  to="/perfil"
+  onClick={() => {
+    closeSidebarMobile();
+    setUserMenuOpen(false);
+  }}
+  className={({ isActive }) =>
+    `
+    w-full flex items-center gap-2.5
+    px-3 py-2 rounded-lg text-sm
+    transition-colors
+    ${
+      isActive
+        ? "bg-slate-700 text-white"
+        : "text-slate-300 hover:bg-slate-700 hover:text-white"
+    }
+    `
+  }
+>
+  <UserCog className="size-4" />
+  Mi Perfil
+</NavLink>
 
                   <button
                     onClick={handleLogout}
