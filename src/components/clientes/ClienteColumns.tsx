@@ -1,4 +1,4 @@
-import { Car, Plus } from "lucide-react";
+import { User, Eye, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -23,15 +23,8 @@ export function createClienteColumns({
       header: "Cliente",
 
       render: (cliente) => (
-        <div className="flex items-center justify-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-violet-100 text-xs font-semibold text-violet-700">
-            {cliente.nombre
-              .split(" ")
-              .slice(0, 2)
-              .map((p) => p[0])
-              .join("")
-              .toUpperCase()}
-          </div>
+        <div className="flex items-center justify-center gap-2">
+          <User className="size-4 text-slate-500" />
 
           <span className="font-medium">
             {cliente.nombre}
@@ -46,7 +39,8 @@ export function createClienteColumns({
 
       cellClassName: "text-muted-foreground",
 
-      render: (cliente) => cliente.telefono || "—",
+      render: (cliente) =>
+        cliente.telefono || "-",
     },
 
     {
@@ -55,10 +49,12 @@ export function createClienteColumns({
 
       render: (cliente) => (
         <div className="flex items-center justify-center gap-2">
-          <Car className="h-4 w-4 text-blue-600" />
-
-          <span>
+          <span className="font-medium">
             {vehiculosCount[cliente.id] ?? 0}
+          </span>
+
+          <span className="text-xs text-muted-foreground">
+            unidades
           </span>
         </div>
       ),
@@ -69,7 +65,8 @@ export function createClienteColumns({
       header: "Estado",
 
       render: (cliente) => {
-        const cantidadVehiculos = vehiculosCount[cliente.id] ?? 0;
+        const cantidadVehiculos =
+          vehiculosCount[cliente.id] ?? 0;
 
         return cantidadVehiculos > 0 ? (
           <span className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">
@@ -88,21 +85,27 @@ export function createClienteColumns({
       header: "Acciones",
 
       render: (cliente) => (
-        <div className="flex justify-center gap-2">
+        <div className="flex items-center justify-center gap-1">
           <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onVerDetalle?.(cliente)}
+            size="icon"
+            variant="ghost"
+            title="Ver detalles"
+            onClick={() =>
+              onVerDetalle?.(cliente)
+            }
           >
-            Ver detalle
+            <Eye className="size-4 text-slate-600" />
           </Button>
 
           <Button
             size="icon"
-            variant="outline"
-            onClick={() => onNuevoVehiculo?.(cliente)}
+            variant="ghost"
+            title="Nuevo vehículo"
+            onClick={() =>
+              onNuevoVehiculo?.(cliente)
+            }
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="size-4 text-blue-600" />
           </Button>
         </div>
       ),

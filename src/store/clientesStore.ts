@@ -24,6 +24,7 @@ interface ClienteStore {
   addCliente: (payload: CreateClienteDto) => Promise<Cliente>;
   editCliente: (id: string, payload: UpdateClienteDto) => Promise<Cliente>;
   setClienteSeleccionado: (cliente: Cliente | null) => void;
+  clearClienteSeleccionado: () => void;
   clearError: () => void;
   resetLoading: () => void;
 }
@@ -126,6 +127,10 @@ export const clienteStore = create<ClienteStore>((set) => ({
 
   setClienteSeleccionado: (cliente) => {
     set({ clienteSeleccionado: cliente });
+  },
+
+  clearClienteSeleccionado: () => {
+    set({ clienteSeleccionado: null });
   },
 
   clearError: () => {

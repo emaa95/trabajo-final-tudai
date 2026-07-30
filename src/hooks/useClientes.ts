@@ -7,6 +7,8 @@ export function useClientes() {
     loading,
     error,
     fetchClientes,
+    fetchClienteById,
+    clearClienteSeleccionado,
     addCliente,
   } = clienteStore();
 
@@ -16,6 +18,8 @@ export function useClientes() {
     loading,
     error,
     fetchClientes,
+    fetchClienteById,
+    clearClienteSeleccionado,
     addCliente,
   };
 }
