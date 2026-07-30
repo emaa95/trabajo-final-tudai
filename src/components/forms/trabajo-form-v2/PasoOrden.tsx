@@ -1,85 +1,51 @@
+import { useFormContext, useWatch } from "react-hook-form";
+
 import { SeccionGeneral } from "../nuevoTrabajo/SeccionGeneral";
 import { SeccionSeguro } from "../nuevoTrabajo/SeccionSeguro";
 
+import type { Empleado, Aseguradora } from "@/types";
+
+import type {
+  TrabajoFormData,
+} from "@/schemas/trabajoSchema";
+
+
+interface PasoOrdenProps {
+  empleados: Empleado[];
+  aseguradoras: Aseguradora[];
+}
+
+
 export function PasoOrden({
-  tipo,
-  estado,
-  prioridad,
-  fecha_ingreso,
-  asignadoA,
-  aseguradoras,
-
-  compania,
-  numeroPoliza,
-  numeroDenuncia,
-  numeroSiniestro,
-  montoAprobado,
   empleados,
-  errors,
+  aseguradoras,
+}: PasoOrdenProps) {
 
-  setTipo,
-  setEstado,
-  setPrioridad,
-  setFechaIngreso,
+  const {
+    control,
+  } = useFormContext<TrabajoFormData>();
 
-  setCompania,
-  setNumeroPoliza,
-  setNumeroDenuncia,
-  setNumeroSiniestro,
-  setMontoAprobado,
-  setAsignadoA,
 
-  clearError,
-}: any) {
+  const tipo = useWatch({
+    control,
+    name: "tipo",
+  });
+
+
   return (
-    <>
+    <div className="space-y-4">
+
       <SeccionGeneral
-        tipo={tipo}
-        estado={estado}
-        prioridad={prioridad}
-        fechaIngreso={fecha_ingreso}
-        asignadoA={asignadoA}
         empleados={empleados}
-        onTipoChange={(value) => {
-          if (!value) return;
-          setTipo(value);
-        }}
-        onEstadoChange={(value) => {
-          if (!value) return;
-          setEstado(value);
-        }}
-        onPrioridadChange={(value) => {
-          if (!value) return;
-          setPrioridad(value);
-        }}
-        onFechaIngresoChange={setFechaIngreso}
-        onAsignadoAChange={setAsignadoA}
       />
+
 
       {tipo === "Seguro" && (
         <SeccionSeguro
           aseguradoras={aseguradoras}
-          compania={compania}
-          numero_poliza={numeroPoliza}
-          numero_denuncia={numeroDenuncia}
-          numero_siniestro={numeroSiniestro}
-          monto_aprobado={montoAprobado}
-          errors={errors}
-          onCompaniaChange={(value) => {
-            if (!value) return;
-
-            setCompania(value);
-            clearError("compania");
-          }}
-          onNumeroPolizaChange={setNumeroPoliza}
-          onNumeroDenunciaChange={setNumeroDenuncia}
-          onNumeroSiniestroChange={(value) => {
-            setNumeroSiniestro(value);
-            clearError("numero_siniestro");
-          }}
-          onMontoAprobadoChange={setMontoAprobado}
         />
       )}
-    </>
+
+    </div>
   );
 }
