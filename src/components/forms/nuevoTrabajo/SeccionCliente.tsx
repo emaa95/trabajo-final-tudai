@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useFormContext, useWatch } from "react-hook-form";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -41,20 +42,46 @@ import {
 
 import { FieldError } from "./FieldError";
 
-import type { SeccionClienteProps } from "@/types";
+import type { TrabajoFormData } from "@/schemas/trabajoSchema";
+import type { Cliente } from "@/types";
+
+interface SeccionClienteProps {
+  clientes: Cliente[];
+  onNuevoCliente: () => void;
+}
 
 export function SeccionCliente({
   clientes,
-  clienteId,
-  error,
-  onClienteChange,
   onNuevoCliente,
 }: SeccionClienteProps) {
   const [openCliente, setOpenCliente] = useState(false);
 
-  const clienteSeleccionado = clientes.find(
-    (cliente) => cliente.id === clienteId,
-  );
+  const {
+    control,
+    setValue,
+    formState: { errors },
+  } = useFormContext<TrabajoFormData>();
+
+  const clienteId = useWatch({ control, name: "cliente_id" });
+  console.log({ clienteId, clientes });
+  const error = errors.cliente_id?.message;
+
+  const clienteSeleccionado = clienteId
+    ? clientes.find((cliente) => String(cliente.id) === String(clienteId))
+    : undefined;
+
+  const handleClienteChange = (id: string) => {
+    setValue("cliente_id", id, {
+      shouldValidate: true,
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+
+    setValue("vehiculo_id", "", {
+      shouldValidate: false,
+      shouldDirty: true,
+    });
+  };
 
   const getInitials = (nombre: string) => {
     return nombre
@@ -104,11 +131,8 @@ export function SeccionCliente({
               Seleccione un cliente existente o cree uno nuevo.
             </p>
 
-            {/* POPOVER TRIGGER (SIN BUTTON ADENTRO) */}
             <Popover open={openCliente} onOpenChange={setOpenCliente}>
-              <PopoverTrigger
-                className="mt-5 inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-              >
+              <PopoverTrigger className="mt-5 inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
                 <Search className="mr-2 size-4" />
                 Seleccionar cliente
               </PopoverTrigger>
@@ -128,9 +152,9 @@ export function SeccionCliente({
                       {clientes.map((cliente) => (
                         <CommandItem
                           key={cliente.id}
-                          value={`${cliente.nombre} ${cliente.documento ?? ""}`}
+                          value={cliente.id}
                           onSelect={() => {
-                            onClienteChange(cliente.id);
+                            handleClienteChange(cliente.id);
                             setOpenCliente(false);
                           }}
                           className="mx-2 my-1 rounded-lg p-3"
@@ -172,6 +196,7 @@ export function SeccionCliente({
 
                 <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
                   <CreditCard className="size-4" />
+
                   <span>
                     {clienteSeleccionado.documento
                       ? `${clienteSeleccionado.tipo_documento} ${clienteSeleccionado.documento}`
@@ -181,17 +206,15 @@ export function SeccionCliente({
 
                 <div className="mt-2 flex items-center gap-2 text-sm">
                   <Phone className="size-4 text-muted-foreground" />
+
                   <span>{clienteSeleccionado.telefono}</span>
                 </div>
               </div>
             </div>
 
             <div className="mt-5 flex gap-2">
-              {/* POPOVER TRIGGER (SIN BUTTON ADENTRO) */}
               <Popover open={openCliente} onOpenChange={setOpenCliente}>
-                <PopoverTrigger
-                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-                >
+                <PopoverTrigger className="flex-1 inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
                   <ArrowRightLeft className="mr-2 size-4" />
                   Cambiar cliente
                 </PopoverTrigger>
@@ -211,9 +234,9 @@ export function SeccionCliente({
                         {clientes.map((cliente) => (
                           <CommandItem
                             key={cliente.id}
-                            value={`${cliente.nombre} ${cliente.documento ?? ""}`}
+                            value={cliente.id}
                             onSelect={() => {
-                              onClienteChange(cliente.id);
+                              handleClienteChange(cliente.id);
                               setOpenCliente(false);
                             }}
                           >
@@ -244,11 +267,8 @@ export function SeccionCliente({
                 </PopoverContent>
               </Popover>
 
-              {/* DIALOG TRIGGER (SIN BUTTON ADENTRO) */}
               <Dialog>
-                <DialogTrigger
-                  className="inline-flex items-center justify-center gap-2 rounded-md bg-secondary px-4 py-2 text-sm font-medium hover:bg-secondary/80"
-                >
+                <DialogTrigger className="inline-flex items-center justify-center gap-2 rounded-md bg-secondary px-4 py-2 text-sm font-medium hover:bg-secondary/80">
                   <Eye className="mr-2 size-4" />
                   Ver ficha
                 </DialogTrigger>
@@ -262,6 +282,7 @@ export function SeccionCliente({
                     <Card>
                       <CardContent className="p-4">
                         <p className="text-sm text-muted-foreground">Nombre</p>
+
                         <p className="font-semibold">
                           {clienteSeleccionado.nombre}
                         </p>
@@ -270,7 +291,10 @@ export function SeccionCliente({
 
                     <Card>
                       <CardContent className="p-4">
-                        <p className="text-sm text-muted-foreground">Teléfono</p>
+                        <p className="text-sm text-muted-foreground">
+                          Teléfono
+                        </p>
+
                         <p className="font-semibold">
                           {clienteSeleccionado.telefono || "-"}
                         </p>
@@ -280,6 +304,7 @@ export function SeccionCliente({
                     <Card>
                       <CardContent className="p-4">
                         <p className="text-sm text-muted-foreground">Email</p>
+
                         <p className="font-semibold">
                           {clienteSeleccionado.email || "-"}
                         </p>
@@ -288,7 +313,10 @@ export function SeccionCliente({
 
                     <Card>
                       <CardContent className="p-4">
-                        <p className="text-sm text-muted-foreground">Documento</p>
+                        <p className="text-sm text-muted-foreground">
+                          Documento
+                        </p>
+
                         <p className="font-semibold">
                           {clienteSeleccionado.documento
                             ? `${clienteSeleccionado.tipo_documento} ${clienteSeleccionado.documento}`
@@ -299,7 +327,10 @@ export function SeccionCliente({
 
                     <Card className="sm:col-span-2">
                       <CardContent className="p-4">
-                        <p className="text-sm text-muted-foreground">Dirección</p>
+                        <p className="text-sm text-muted-foreground">
+                          Dirección
+                        </p>
+
                         <p className="font-semibold">
                           {clienteSeleccionado.direccion || "-"}
                         </p>

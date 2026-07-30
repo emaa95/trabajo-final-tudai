@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useFormContext, useWatch } from "react-hook-form";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -39,7 +40,13 @@ import {
 
 import { FieldError } from "./FieldError";
 
-import type { SeccionVehiculoProps } from "@/types";
+import type { TrabajoFormData } from "@/schemas/trabajoSchema";
+import type { Vehiculo } from "@/types";
+
+interface SeccionVehiculoProps {
+  vehiculos: Vehiculo[];
+  onNuevoVehiculo: () => void;
+}
 
 function obtenerColorVehiculo(color?: string | null): string {
   if (!color) return "#9ca3af";
@@ -67,21 +74,28 @@ function obtenerColorVehiculo(color?: string | null): string {
   return mapa[valor] ?? "#9ca3af";
 }
 
-export function SeccionVehiculo({
-  vehiculos,
-  cliente_id,
-  vehiculoId,
-  error,
-  onVehiculoChange,
-  onNuevoVehiculo,
-}: SeccionVehiculoProps) {
+export function SeccionVehiculo({ vehiculos, onNuevoVehiculo }: SeccionVehiculoProps) {
   const [openVehiculo, setOpenVehiculo] = useState(false);
+
+  const {
+    control,
+    setValue,
+    formState: { errors },
+  } = useFormContext<TrabajoFormData>();
+
+  const clienteId = useWatch({ control, name: "cliente_id" });
+  const vehiculoId = useWatch({ control, name: "vehiculo_id" });
+  const error = errors.vehiculo_id?.message;
 
   const vehiculoSeleccionado = vehiculos.find(
     (vehiculo) => vehiculo.id === vehiculoId,
   );
 
-  const disabled = !cliente_id;
+  const disabled = !clienteId;
+
+  const handleVehiculoChange = (id: string) => {
+    setValue("vehiculo_id", id, { shouldValidate: true, shouldDirty: true });
+  };
 
   return (
     <Card className="border-emerald-200 bg-emerald-50/40 dark:border-emerald-950 dark:bg-emerald-950/20">
@@ -164,7 +178,7 @@ export function SeccionVehiculo({
                             key={vehiculo.id}
                             value={`${vehiculo.patente} ${vehiculo.marca ?? ""} ${vehiculo.modelo ?? ""} ${vehiculo.color ?? ""}`}
                             onSelect={() => {
-                              onVehiculoChange(vehiculo.id);
+                              handleVehiculoChange(vehiculo.id);
                               setOpenVehiculo(false);
                             }}
                           >
@@ -264,7 +278,7 @@ export function SeccionVehiculo({
                               key={vehiculo.id}
                               value={`${vehiculo.patente} ${vehiculo.marca ?? ""} ${vehiculo.modelo ?? ""}`}
                               onSelect={() => {
-                                onVehiculoChange(vehiculo.id);
+                                handleVehiculoChange(vehiculo.id);
                                 setOpenVehiculo(false);
                               }}
                             >
