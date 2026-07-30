@@ -1,0 +1,18 @@
+export const ErrorCode = {
+  UNKNOWN: "UNKNOWN",
+
+  NETWORK: "NETWORK",
+  SERVER: "SERVER",
+  TIMEOUT: "TIMEOUT",
+
+  INVALID_CREDENTIALS: "INVALID_CREDENTIALS",
+  EMAIL_ALREADY_EXISTS: "EMAIL_ALREADY_EXISTS",
+  SESSION_EXPIRED: "SESSION_EXPIRED",
+
+  VALIDATION: "VALIDATION",
+
+  SUPABASE_ERROR: "SUPABASE_ERROR",
+} as const;
+
+export type ErrorCode =
+  typeof ErrorCode[keyof typeof ErrorCode];
