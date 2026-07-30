@@ -26,38 +26,43 @@ export function StatCard({
   };
 
   return (
-    <Card>
-      <CardContent className="flex flex-col gap-1 px-5">
-        <div className="flex items-center justify-between">
-          <div
-            className={`flex size-10 items-center justify-center rounded-lg ${iconClass}`}
-          >
-            {icon}
+    <Card className="group relative overflow-hidden border-border/60 py-0 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+      {/* Glow ambiental */}
+      <div className="pointer-events-none absolute -right-8 -top-8 size-24 rounded-full bg-linear-to-br from-foreground/4 to-transparent blur-2xl transition-opacity duration-300 group-hover:opacity-100" />
+
+      <CardContent className="relative flex items-center gap-3 px-4 pt-3 pb-0">
+        <div
+          className={`flex size-11 shrink-0 items-center justify-center rounded-xl shadow-inner ring-1 ring-black/4 ${iconClass}`}
+        >
+          {icon}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xl font-semibold leading-none tracking-tight">
+              {value}
+            </p>
+
+            <span
+              className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium leading-none ${trendStyles[trend]}`}
+            >
+              {trend === "up" ? "↑" : trend === "down" ? "↓" : "—"}
+            </span>
           </div>
 
-          <span
-            className={`rounded-full px-2 py-0.5 text-xs font-medium ${trendStyles[trend]}`}
-          >
-            {trend === "up"
-              ? "↑"
-              : trend === "down"
-                ? "↓"
-                : "—"}{" "}
-            sin cambio
-          </span>
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+            {label}
+          </p>
         </div>
+      </CardContent>
 
-        <div>
-          <p className="text-2xl font-semibold leading-none">{value}</p>
-          <p className="mt-1 text-sm text-muted-foreground">{label}</p>
-        </div>
-
-        {footer && (
-          <p className="border-t pt-2.5 text-xs text-muted-foreground">
+      {footer && (
+        <div className="relative border-t border-border/40 bg-muted/20 px-4 py-1">
+          <p className="truncate text-[11px] text-muted-foreground">
             {footer}
           </p>
-        )}
-      </CardContent>
+        </div>
+      )}
     </Card>
   );
 }
