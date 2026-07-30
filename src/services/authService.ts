@@ -1,5 +1,4 @@
 import type { Session } from "@supabase/supabase-js";
-
 import {
   getSession,
   signIn,
@@ -9,17 +8,17 @@ import {
   getCurrentUser,
   type AuthStateChangeCallback,
 } from "@/repositories/authRepository";
-
 import {
   createEmpleado,
   getEmpleadoByDni,
+  getEmpleadoByAuthUserId,
 } from "@/repositories/empleadoRepository";
-
-import {
-  createTaller,
-} from "@/repositories/tallerRepository";
-
+import { createTaller } from "@/repositories/tallerRepository";
 import type { RegisterPayload } from "@/types";
+import { AppError } from "@/lib/errors/AppError";
+import { ErrorCode } from "@/lib/errors/ErrorCode";
+import { mapSupabaseAuthError } from "@/lib/errors/mappers/mapSupabaseAuthError";
+import { mapSupabaseDbError } from "@/lib/errors/mappers/mapSupabaseDbError";
 
 // =========================
 // SESSION
@@ -41,14 +40,72 @@ export async function getCurrentSession(): Promise<Session | null> {
 // =========================
 
 export async function getCurrentUserData() {
-  const { data, error } = await getCurrentUser();
+  const { data: authUser, error } = await getCurrentUser();
 
   if (error) {
-    console.warn("[getCurrentUserData]", error);
+    console.warn("[getCurrentUserData auth]", error);
     return null;
   }
 
-  return data ?? null;
+  if (!authUser) {
+    return null;
+  }
+
+
+  const {
+    data: empleado,
+    error: empleadoError,
+  } = await getEmpleadoByAuthUserId(
+    authUser.id
+  );
+
+
+  if (empleadoError) {
+    console.warn(
+      "[getCurrentUserData empleado]",
+      empleadoError
+    );
+
+    return null;
+  }
+
+
+  if (!empleado) {
+    return null;
+  }
+
+
+  return {
+    id: authUser.id,
+
+    email:
+      authUser.email ?? "",
+
+    empleado: {
+      id: empleado.id,
+
+      nombre:
+        empleado.nombre,
+
+      apellido:
+        empleado.apellido,
+
+      cargo:
+        empleado.cargo,
+
+      dni:
+        empleado.dni,
+
+      telefono:
+        empleado.telefono,
+
+      taller_id:
+        empleado.taller_id,
+
+      is_admin:
+        empleado.is_admin,
+    },
+  };
 }
 
 // =========================
@@ -59,7 +116,7 @@ export async function login(email: string, password: string) {
   const { data, error } = await signIn(email, password);
 
   if (error) {
-    throw new Error(error.message);
+    throw mapSupabaseAuthError(error);
   }
 
   return data;
@@ -74,56 +131,51 @@ export async function register(payload: RegisterPayload) {
   // VALIDAR DNI
   // =========================
 
-  const {
-    data: empleadoExistente,
-    error: empleadoExistenteError,
-  } = await getEmpleadoByDni(payload.dni);
+  const { data: empleadoExistente, error: empleadoExistenteError } =
+    await getEmpleadoByDni(payload.dni);
 
   if (empleadoExistenteError) {
-    throw new Error(empleadoExistenteError.message);
+    throw mapSupabaseDbError(empleadoExistenteError);
   }
 
   if (empleadoExistente) {
-    throw new Error("Ya existe un empleado con ese DNI");
+    throw new AppError(
+      ErrorCode.VALIDATION,
+      "Ya existe un empleado con ese DNI"
+    );
   }
 
   // =========================
   // CREAR USUARIO AUTH
   // =========================
 
-  const { data, error } = await signUp(
-    payload.email,
-    payload.password,
-    {
-      nombre: payload.nombre,
-      apellido: payload.apellido,
-    }
-  );
+  const { data, error } = await signUp(payload.email, payload.password, {
+    nombre: payload.nombre,
+    apellido: payload.apellido,
+  });
 
   if (error) {
-    throw new Error(error.message);
+    throw mapSupabaseAuthError(error);
   }
 
   // =========================
   // LOGIN AUTOMÁTICO
   // =========================
 
-  const {
-    data: loginData,
-    error: loginError,
-  } = await signIn(
+  const { data: loginData, error: loginError } = await signIn(
     payload.email,
     payload.password
   );
 
   if (loginError) {
-    throw new Error(loginError.message);
+    throw mapSupabaseAuthError(loginError);
   }
 
   const authUser = loginData.user;
 
   if (!authUser) {
-    throw new Error(
+    throw new AppError(
+      ErrorCode.UNKNOWN,
       "No se pudo autenticar el usuario"
     );
   }
@@ -132,53 +184,37 @@ export async function register(payload: RegisterPayload) {
   // CREAR TALLER
   // =========================
 
-  const {
-    data: taller,
-    error: tallerError,
-  } = await createTaller({
+  const { data: taller, error: tallerError } = await createTaller({
     nombre: payload.taller_nombre.trim(),
     direccion: payload.taller_direccion,
     telefono: payload.taller_telefono,
   });
 
   if (tallerError) {
-    if (
-      tallerError.message.includes("unique") ||
-      tallerError.message.includes("duplicate")
-    ) {
-      throw new Error(
-        "Ya existe un taller con ese nombre"
-      );
-    }
-
-    throw new Error(tallerError.message);
+    throw mapSupabaseDbError(tallerError);
   }
 
   if (!taller) {
-    throw new Error(
-      "No se pudo crear el taller"
-    );
+    throw new AppError(ErrorCode.UNKNOWN, "No se pudo crear el taller");
   }
 
   // =========================
   // CREAR EMPLEADO ADMIN
   // =========================
 
-  const { error: empleadoError } =
-    await createEmpleado({
-      auth_user_id: authUser.id,
-      nombre: payload.nombre,
-      apellido: payload.apellido,
-      dni: payload.dni,
-      telefono: payload.telefono,
-      cargo: "Administrativo",
-      taller_id: taller.id,
-    });
+  const { error: empleadoError } = await createEmpleado({
+    auth_user_id: authUser.id,
+    nombre: payload.nombre,
+    apellido: payload.apellido,
+    dni: payload.dni,
+    telefono: payload.telefono,
+    cargo: "Administrativo",
+    taller_id: taller.id,
+    is_admin: true,
+  });
 
   if (empleadoError) {
-    throw new Error(
-      empleadoError.message
-    );
+    throw mapSupabaseDbError(empleadoError);
   }
 
   return data;
@@ -192,7 +228,7 @@ export async function logout() {
   const { error } = await signOut();
 
   if (error) {
-    throw new Error(error.message);
+    throw mapSupabaseAuthError(error);
   }
 }
 
@@ -200,8 +236,6 @@ export async function logout() {
 // AUTH LISTENER
 // =========================
 
-export function listenAuthChanges(
-  callback: AuthStateChangeCallback
-) {
+export function listenAuthChanges(callback: AuthStateChangeCallback) {
   return onAuthStateChange(callback);
 }

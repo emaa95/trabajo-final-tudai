@@ -82,64 +82,41 @@ export function useAuth() {
   // =========================
 
   async function login(email: string, password: string) {
-    try {
-      setLoading(true);
+  setLoading(true);
+  try {
+    const response = await loginService(email, password);
+    setAuthUser(response.user ?? null);
 
-      const response = await loginService(email, password);
-
-      setAuthUser(response.user ?? null);
-
-      if (response.user) {
-        const currentUser = await getCurrentUserData();
-        setCurrentUser(currentUser);
-      }
-
-      return { ok: true };
-    } catch (error) {
-      return {
-        ok: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Error al iniciar sesión",
-      };
-    } finally {
-      setLoading(false);
+    if (response.user) {
+      const currentUser = await getCurrentUserData();
+      setCurrentUser(currentUser);
     }
+  } finally {
+    setLoading(false);
   }
+}
 
   // =========================
   // REGISTER
   // =========================
 
   async function register(payload: RegisterPayload) {
-    try {
-      setLoading(true);
+  setLoading(true);
+  try {
+    const data = await registerService(payload);
+    const session = await getCurrentSession();
+    setAuthUser(session?.user ?? null);
 
-      await registerService(payload);
-
-      const session = await getCurrentSession();
-
-      setAuthUser(session?.user ?? null);
-
-      if (session?.user) {
-        const currentUser = await getCurrentUserData();
-        setCurrentUser(currentUser);
-      }
-
-      return { ok: true };
-    } catch (error) {
-      return {
-        ok: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Error al registrar usuario",
-      };
-    } finally {
-      setLoading(false);
+    if (session?.user) {
+      const currentUser = await getCurrentUserData();
+      setCurrentUser(currentUser);
     }
+
+    return data;
+  } finally {
+    setLoading(false);
   }
+}
 
   // =========================
   // LOGOUT (SIMPLIFICADO)

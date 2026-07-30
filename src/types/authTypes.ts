@@ -26,6 +26,7 @@ export interface CurrentUser {
     cargo: string;
     dni?: string;
     telefono?: string;
-    isAdmin: boolean;
+    is_admin: boolean;
+    taller_id: string;
   };
 }
