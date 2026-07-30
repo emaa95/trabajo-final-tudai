@@ -327,7 +327,7 @@ export function Home() {
                 </p>
 
                 <p className="text-sm text-slate-600">
-                  {trabajo.vehiculo?.cliente.nombre}
+                  {trabajo.vehiculo.cliente?.nombre ?? "Sin cliente"}
                 </p>
 
                 <div className="flex items-center justify-between mt-1">
