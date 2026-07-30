@@ -1,10 +1,23 @@
-import { trabajoStore } from '@/store/trabajoStore';
+import { trabajoStore } from "@/store/trabajoStore";
+
 
 export function useTrabajos() {
+
   return {
-    trabajos: trabajoStore(
-      (state) => state.trabajos
-    ),
+
+    trabajos:
+      trabajoStore(
+        (state) =>
+          state.trabajos
+      ),
+
+
+    trabajosByVehiculo:
+      trabajoStore(
+        (state) =>
+          state.trabajosByVehiculo
+      ),
+
 
     trabajoSeleccionado:
       trabajoStore(
@@ -12,13 +25,20 @@ export function useTrabajos() {
           state.trabajoSeleccionado
       ),
 
-    loading: trabajoStore(
-      (state) => state.loading
-    ),
 
-    error: trabajoStore(
-      (state) => state.error
-    ),
+    loading:
+      trabajoStore(
+        (state) =>
+          state.loading
+      ),
+
+
+    error:
+      trabajoStore(
+        (state) =>
+          state.error
+      ),
+
 
     fetchTrabajos:
       trabajoStore(
@@ -26,15 +46,27 @@ export function useTrabajos() {
           state.fetchTrabajos
       ),
 
+
+    fetchTrabajosByVehiculo:
+      trabajoStore(
+        (state) =>
+          state.fetchTrabajosByVehiculo
+      ),
+
+
     fetchTrabajoById:
       trabajoStore(
         (state) =>
           state.fetchTrabajoById
       ),
 
-    addTrabajo: trabajoStore(
-      (state) => state.addTrabajo
-    ),
+
+    addTrabajo:
+      trabajoStore(
+        (state) =>
+          state.addTrabajo
+      ),
+
 
     updateTrabajo:
       trabajoStore(
@@ -42,14 +74,20 @@ export function useTrabajos() {
           state.updateTrabajo
       ),
 
+
     setTrabajoSeleccionado:
       trabajoStore(
         (state) =>
           state.setTrabajoSeleccionado
       ),
 
-    clearError: trabajoStore(
-      (state) => state.clearError
-    ),
+
+    clearError:
+      trabajoStore(
+        (state) =>
+          state.clearError
+      ),
+
   };
+
 }

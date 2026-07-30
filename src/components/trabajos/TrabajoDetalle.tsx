@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router";
+import { useParams, Link } from "react-router-dom";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,16 @@ import { EstadoBadge, TipoBadge } from "../common/Badges";
 import { PresupuestoModal } from "@/components/modals/PresupuestoModal";
 import { ModalService } from "@/components/modals/ModalService";
 import { useTrabajos } from "@/hooks/useTrabajos";
-import { ESTADOS_TRABAJO, type EstadoTrabajo } from "@/types";
+import {
+  PRIORIDADES_TRABAJO,
+  getPermisosEstadoTrabajo,
+  getEstadosDisponibles,
+  type EstadoTrabajo,
+  type PrioridadTrabajo,
+  type TareaTrabajoDraft,
+  type TrabajoDetalle,
+  type TrabajoDetalleDraft,
+} from "@/types";
 
 import {
   ArrowLeft,
@@ -23,36 +32,242 @@ import {
   Mail,
   Phone,
   Gauge,
-  Droplets,
+  Pencil,
+  Flag,
 } from "lucide-react";
 
-import { toast } from "sonner";
 import { obtenerColorVehiculo } from "@/utils/vehiculoColors";
+import { ServiceCard } from "./ServiceCard";
+
+import { sileo } from "sileo";
+import { TrabajoSolicitadoCard } from "./editables/TrabajoSolicitadoCard";
+import { TareasCard } from "./editables/TareasCard";
+import { useTareas } from "@/hooks/useTareas";
 
 export function TrabajoDetalle() {
   const { id } = useParams();
 
-  const { trabajoSeleccionado, updateTrabajo, fetchTrabajoById, loading } =useTrabajos();
+  const { trabajoSeleccionado, updateTrabajo, fetchTrabajoById, loading } =
+    useTrabajos();
+  const { addTarea, updateTarea, removeTarea } = useTareas();
 
   const [estadoActual, setEstadoActual] = useState<EstadoTrabajo>("Pendiente");
+  const [prioridadActual, setPrioridadActual] = useState<PrioridadTrabajo | undefined>();
   const [showPresupuesto, setShowPresupuesto] = useState(false);
   const [showService, setShowService] = useState(false);
+  const [editando, setEditando] = useState(false);
+  const [draft, setDraft] = useState<TrabajoDetalleDraft | null>(null);
 
-  
- useEffect(() => {
-  if (!id) return;
+  useEffect(() => {
+    if (!id) return;
 
-  fetchTrabajoById(id);
-}, [id]);
+    fetchTrabajoById(id);
+  }, [id]);
 
-  const trabajo = trabajoSeleccionado;
+  useEffect(() => {
+    if (!trabajoSeleccionado) return;
+
+    setDraft(structuredClone(trabajoSeleccionado));
+  }, [trabajoSeleccionado]);
+
+  const updateDraft = <K extends keyof TrabajoDetalleDraft>(
+    key: K,
+    value: TrabajoDetalleDraft[K],
+  ) => {
+    setDraft((prev) =>
+      prev
+        ? {
+            ...prev,
+            [key]: value,
+          }
+        : prev,
+    );
+  };
+
+  const recalcularPrecioTotal = (tareas: TareaTrabajoDraft[]) => {
+    return tareas.reduce((total, tarea) => total + Number(tarea.costo || 0), 0);
+  };
+
+  const updateTareas = (tareas: TrabajoDetalleDraft["tareas"]) => {
+    setDraft((prev) =>
+      prev
+        ? {
+            ...prev,
+            tareas,
+            precio_total: recalcularPrecioTotal(tareas ?? []),
+          }
+        : prev,
+    );
+  };
+
+  const handleToggleTarea = async (tareaId: string, realizada: boolean) => {
+    try {
+      await updateTarea(tareaId, {
+        realizada,
+      });
+
+      setDraft((prev) =>
+        prev
+          ? {
+              ...prev,
+              tareas: prev.tareas?.map((tarea) =>
+                tarea.id === tareaId
+                  ? {
+                      ...tarea,
+                      realizada,
+                    }
+                  : tarea,
+              ),
+            }
+          : prev,
+      );
+
+      sileo.success({
+        title: realizada ? "Tarea completada" : "Tarea pendiente",
+        description: realizada
+          ? "La tarea fue marcada como realizada."
+          : "La tarea volvió a estado pendiente.",
+      });
+    } catch (error) {
+      console.error(error);
+
+      sileo.error({
+        title: "Error",
+        description: "No se pudo actualizar el estado de la tarea.",
+      });
+    }
+  };
+
+  const handleDeleteTarea = (tarea: TareaTrabajoDraft) => {
+    if (!draft?.tareas) return;
+
+    if (tarea.id) {
+      removeTarea(tarea.id);
+    }
+
+    updateTareas(draft.tareas.filter((t) => t !== tarea));
+  };
+
+  const trabajo = draft;
   const vehiculo = trabajo?.vehiculo;
   const cliente = trabajo?.vehiculo.cliente;
 
- const serviceSeleccionado = trabajo?.service;
+  const serviceSeleccionado = trabajo?.service;
+
   useEffect(() => {
-    if (trabajo) setEstadoActual(trabajo.estado);
+    if (!trabajo) return;
+
+    setEstadoActual(trabajo.estado);
+    setPrioridadActual(trabajo.prioridad);
   }, [trabajo]);
+
+  const handleActualizarPrioridad = async () => {
+    if (!trabajo || !prioridadActual) return;
+
+    try {
+      await updateTrabajo(trabajo.id, {
+        prioridad: prioridadActual,
+      });
+
+      setDraft((prev) =>
+        prev
+          ? {
+              ...prev,
+              prioridad: prioridadActual,
+            }
+          : prev,
+      );
+
+      sileo.success({
+        title: "Prioridad actualizada",
+        description: "La prioridad fue actualizada correctamente.",
+      });
+    } catch {
+      sileo.error({
+        title: "Error",
+        description: "No se pudo actualizar la prioridad.",
+      });
+    }
+  };
+
+  const handleCancelarEdicion = () => {
+    if (trabajoSeleccionado) {
+      setDraft(structuredClone(trabajoSeleccionado));
+    }
+
+    setEditando(false);
+  };
+
+  const handleGuardarTareas = async () => {
+    if (!draft) return;
+
+    const tareasActualizadas: TareaTrabajoDraft[] = [];
+
+    for (const tarea of draft.tareas ?? []) {
+      if (tarea.isNew) {
+        const nuevaTarea = await addTarea({
+          titulo: tarea.titulo,
+          costo: tarea.costo,
+          realizada: tarea.realizada,
+          trabajo_id: draft.id,
+        });
+
+        tareasActualizadas.push({
+          ...nuevaTarea,
+          isNew: false,
+        });
+      } else if (tarea.id) {
+        const tareaActualizada = await updateTarea(tarea.id, {
+          titulo: tarea.titulo,
+          costo: tarea.costo,
+          realizada: tarea.realizada,
+        });
+
+        tareasActualizadas.push({
+          ...tareaActualizada,
+          isNew: false,
+        });
+      }
+    }
+
+    setDraft((prev) =>
+      prev
+        ? {
+            ...prev,
+            tareas: tareasActualizadas,
+            precio_total: recalcularPrecioTotal(tareasActualizadas),
+          }
+        : prev,
+    );
+  };
+
+  const handleGuardarCambios = async () => {
+    if (!draft) return;
+
+    try {
+      await updateTrabajo(draft.id, {
+        tipo: draft.tipo,
+        fecha_ingreso: draft.fecha_ingreso,
+        trabajos_solicitados: draft.trabajos_solicitados,
+        notas: draft.notas,
+        precio_total: draft.precio_total,
+      });
+
+      await handleGuardarTareas();
+
+      sileo.success({
+        title: "Cambios guardados",
+        description: "La orden y las tareas fueron actualizadas correctamente.",
+      });
+
+      setEditando(false);
+    } catch {
+      sileo.error({
+        title: "Error",
+        description: "No se pudieron guardar los cambios.",
+      });
+    }
+  };
 
   const formatFecha = (fecha: string) =>
     new Date(fecha).toLocaleDateString("es-AR", {
@@ -65,10 +280,19 @@ export function TrabajoDetalle() {
     if (!trabajo) return;
 
     try {
-      await updateTrabajo(trabajo.id, { estado: estadoActual });
-      toast.success(`Estado actualizado a "${estadoActual}"`);
+      await updateTrabajo(trabajo.id, {
+        estado: estadoActual,
+      });
+
+      sileo.success({
+        title: "Estado actualizado",
+        description: `El trabajo ahora está en "${estadoActual}".`,
+      });
     } catch {
-      toast.error("No se pudo actualizar el estado");
+      sileo.error({
+        title: "Error",
+        description: "No se pudo actualizar el estado.",
+      });
     }
   };
 
@@ -85,69 +309,70 @@ export function TrabajoDetalle() {
     );
   }
 
+  // 🔑 Permisos derivados del estado actual guardado (no del select en edición)
+  const permisos = getPermisosEstadoTrabajo(trabajo.estado);
+  const estadosDisponibles = getEstadosDisponibles(trabajo.estado);
+
   return (
     <div className="space-y-6 bg-slate-50 min-h-screen p-6">
-      <div className="rounded-2xl bg-gradient-to-r from-slate-900 to-slate-800 text-white p-6">
-  
-  {/* HEADER SUPERIOR */}
-  <div className="flex items-center justify-between mb-6">
-    
-    {/* izquierda: volver */}
-    <Link to="/trabajos">
-      <Button variant="outline" size="sm" className="bg-white/5 border-white/10 text-white hover:bg-white/10">
-        <ArrowLeft className="size-4 mr-2" />
-        Volver
-      </Button>
-    </Link>
+      <div className="rounded-2xl bg-linear-to-r from-slate-900 to-slate-800 text-white p-6">
+        <div className="flex items-center justify-between mb-6">
+          <Link to="/trabajos">
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-white/5 border-white/10 text-white hover:bg-white/10"
+            >
+              <ArrowLeft className="size-4 mr-2" />
+              Volver
+            </Button>
+          </Link>
 
-    {/* derecha: badges */}
-    <div className="flex gap-2">
-      <EstadoBadge estado={estadoActual} />
-      <TipoBadge tipo={trabajo.tipo} />
-    </div>
-  </div>
+          <div className="flex items-center gap-2">
+            <EstadoBadge estado={estadoActual} />
+            <TipoBadge tipo={trabajo.tipo} />
+          </div>
+        </div>
 
-  {/* CONTENIDO PRINCIPAL DEL HEADER */}
-  <div className="space-y-1">
-    <p className="text-slate-300 text-sm flex items-center gap-2">
-      <Wrench className="size-4" />
-      Orden de trabajo
-    </p>
+        <div className="space-y-1">
+          <p className="text-slate-300 text-sm flex items-center gap-2">
+            <Wrench className="size-4" />
+            Orden de trabajo
+          </p>
 
-    <p className="text-xl font-semibold">
-      OT-{trabajo.id.slice(-4).toUpperCase()}-
-      {new Date(trabajo.fecha_ingreso).getFullYear()}
-    </p>
+          <p className="text-xl font-semibold">
+            OT-{trabajo.id.slice(-4).toUpperCase()}-
+            {new Date(trabajo.fecha_ingreso).getFullYear()}
+          </p>
 
-    <p className="text-slate-300 flex items-center gap-2">
-      <Car className="size-4" />
-      {vehiculo.marca} {vehiculo.modelo} • {vehiculo.patente}
-    </p>
+          <p className="text-slate-300 flex items-center gap-2">
+            <Car className="size-4" />
+            {vehiculo.marca} {vehiculo.modelo} • {vehiculo.patente}
+          </p>
 
-    <p className="text-slate-400 text-sm flex items-center gap-2 mt-1">
-      <Calendar className="size-4" />
-      Ingreso: {formatFecha(trabajo.fecha_ingreso)}
-    </p>
-    <p className="text-slate-300 flex items-center gap-2">
-      <Gauge className="size-4" />
-      <span className="font-medium">
-        {trabajo.precio_total?.toLocaleString("es-AR", {
-          style: "currency",
-          currency: "ARS",
-        })}
-      </span>
-      {trabajo.prioridad && (
-        <span className="ml-3 text-sm text-slate-300">• {trabajo.prioridad}</span>
-      )}
-    </p>
-  </div>
-</div>
+          <p className="text-slate-400 text-sm flex items-center gap-2 mt-1">
+            <Calendar className="size-4" />
+            Ingreso: {formatFecha(trabajo.fecha_ingreso)}
+          </p>
+          <p className="text-slate-300 flex items-center gap-2">
+            <Gauge className="size-4" />
+            <span className="font-medium">
+              {trabajo.precio_total?.toLocaleString("es-AR", {
+                style: "currency",
+                currency: "ARS",
+              })}
+            </span>
+            {trabajo.prioridad && (
+              <span className="ml-3 text-sm text-slate-300">
+                • {trabajo.prioridad}
+              </span>
+            )}
+          </p>
+        </div>
+      </div>
 
-      {/* GRID PRINCIPAL */}
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* IZQUIERDA */}
         <div className="lg:col-span-2 space-y-6">
-          {/* VEHICULO + CLIENTE */}
           <div className="grid lg:grid-cols-2 gap-6">
             <Card className="border-slate-200">
               <CardHeader>
@@ -204,7 +429,8 @@ export function TrabajoDetalle() {
                 {cliente.documento && (
                   <p className="text-slate-500 flex items-center gap-2">
                     <FileText className="size-4" />
-                    {cliente.documento} {cliente.tipo_documento && `(${cliente.tipo_documento})`}
+                    {cliente.documento}{" "}
+                    {cliente.tipo_documento && `(${cliente.tipo_documento})`}
                   </p>
                 )}
                 {cliente.email && (
@@ -217,23 +443,14 @@ export function TrabajoDetalle() {
             </Card>
           </div>
 
-          {/* TRABAJO */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Wrench className="text-orange-500" />
-                Trabajo solicitado
-              </CardTitle>
-            </CardHeader>
+          <TrabajoSolicitadoCard
+            editando={editando && permisos.editarOrden}
+            trabajosSolicitados={trabajo.trabajos_solicitados}
+            onChange={(trabajos) =>
+              updateDraft("trabajos_solicitados", trabajos)
+            }
+          />
 
-            <CardContent>
-              <p className="text-slate-700">
-                {trabajo.trabajos_solicitados?.join(", ") || "Sin descripción"}
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* NOTAS */}
           {trabajo.notas && (
             <Card>
               <CardHeader>
@@ -249,138 +466,25 @@ export function TrabajoDetalle() {
             </Card>
           )}
 
-          {/* TAREAS */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="text-slate-500" />
-                Tareas
-              </CardTitle>
-            </CardHeader>
+          <TareasCard
+            tareas={trabajo.tareas ?? []}
+            editando={editando && permisos.editarOrden}
+            puedeAgregar={permisos.agregarTareas}
+            puedeEditar={permisos.editarTareas}
+            puedeEliminar={permisos.eliminarTareas}
+            puedeCambiarRealizada={permisos.marcarTareas}
+            onChange={updateTareas}
+            onToggleRealizada={handleToggleTarea}
+            onDelete={handleDeleteTarea}
+          />
 
-            <CardContent>
-              {trabajo.tareas && trabajo.tareas.length > 0 ? (
-                <div className="space-y-2">
-                  {trabajo.tareas.map((t) => (
-                    <div className="flex items-center justify-between" key={t.id}>
-                      <div className="flex items-center gap-2">
-                        {t.realizada ? (
-                          <CheckCircle className="text-emerald-500" />
-                        ) : (
-                          <Clock className="text-slate-400" />
-                        )}
-                        <div>
-                          <div className="font-medium">{t.titulo}</div>
-                          <div className="text-xs text-slate-500">{t.realizada ? 'Realizada' : 'Pendiente'}</div>
-                        </div>
-                      </div>
-
-                      <div className="text-sm font-medium">
-                        {t.costo?.toLocaleString("es-AR", { style: "currency", currency: "ARS" })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-slate-500">Sin tareas registradas</p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* SERVICE */}
-          <Card className="border-slate-200">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Wrench className="text-blue-500" />
-                Service
-              </CardTitle>
-            </CardHeader>
-
-            <CardContent>
-              {serviceSeleccionado ? (
-                <div className="grid grid-cols-2 gap-4">
-                  {serviceSeleccionado.aceite_utilizado && (
-                    <div className="flex items-center gap-2">
-                      <Droplets className="size-4 text-slate-400" />
-                      <div>
-                        <p className="text-xs text-slate-500">Aceite</p>
-                        <p className="font-medium">
-                          {serviceSeleccionado.aceite_utilizado}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {serviceSeleccionado.kilometraje_actual && (
-                    <div className="flex items-center gap-2">
-                      <Gauge className="size-4 text-slate-400" />
-                      <div>
-                        <p className="text-xs text-slate-500">Km actual</p>
-                        <p className="font-medium">
-                          {serviceSeleccionado.kilometraje_actual.toLocaleString(
-                            "es-AR",
-                          )}{" "}
-                          km
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {serviceSeleccionado.proximo_service_km && (
-                    <div className="flex items-center gap-2">
-                      <Gauge className="size-4 text-slate-400" />
-                      <div>
-                        <p className="text-xs text-slate-500">
-                          Próximo service
-                        </p>
-                        <p className="font-medium">
-                          {serviceSeleccionado.proximo_service_km.toLocaleString(
-                            "es-AR",
-                          )}{" "}
-                          km
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {serviceSeleccionado.proxima_fecha_service && (
-                    <div className="flex items-center gap-2">
-                      <Calendar className="size-4 text-slate-400" />
-                      <div>
-                        <p className="text-xs text-slate-500">Fecha próximo</p>
-                        <p className="font-medium">
-                          {formatFecha(
-                            serviceSeleccionado.proxima_fecha_service,
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {serviceSeleccionado.observaciones && (
-                    <div className="col-span-2">
-                      <p className="text-xs text-slate-500 mb-1">
-                        Observaciones
-                      </p>
-                      <p className="text-slate-700 text-sm">
-                        {serviceSeleccionado.observaciones}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="py-6 text-center text-slate-400">
-                  <Wrench className="mx-auto mb-2 size-6" />
-                  <p className="text-sm">No hay service registrado</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <ServiceCard
+            service={serviceSeleccionado ?? null}
+            estadoTrabajo={trabajo.estado}
+          />
         </div>
 
-        {/* DERECHA */}
         <div className="space-y-6">
-          {/* ESTADO */}
           <Card className="border-blue-200 bg-blue-50">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -395,16 +499,23 @@ export function TrabajoDetalle() {
                 onChange={(e) =>
                   setEstadoActual(e.target.value as EstadoTrabajo)
                 }
-                className="w-full p-2 border rounded"
+                disabled={!permisos.editarEstado}
+                className="w-full p-2 border rounded disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {ESTADOS_TRABAJO.map((estado) => (
+                {estadosDisponibles.map((estado) => (
                   <option key={estado} value={estado}>
                     {estado}
                   </option>
                 ))}
               </select>
 
-              {estadoActual !== trabajo.estado && (
+              {!permisos.editarEstado && (
+                <p className="text-xs text-slate-500">
+                  Este estado no permite más cambios.
+                </p>
+              )}
+
+              {permisos.editarEstado && estadoActual !== trabajo.estado && (
                 <p className="text-xs text-amber-600">
                   Hay cambios sin guardar
                 </p>
@@ -412,7 +523,7 @@ export function TrabajoDetalle() {
 
               <Button
                 className="w-full bg-blue-600 hover:bg-blue-700"
-                disabled={estadoActual === trabajo.estado}
+                disabled={!permisos.editarEstado || estadoActual === trabajo.estado}
                 onClick={handleActualizarEstado}
               >
                 <CheckCircle className="mr-2" />
@@ -421,16 +532,97 @@ export function TrabajoDetalle() {
             </CardContent>
           </Card>
 
-          {/* ACCIONES */}
+          <Card className="border-amber-200 bg-amber-50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Flag className="text-amber-600" />
+                Prioridad
+              </CardTitle>
+            </CardHeader>
+
+            <CardContent className="space-y-3">
+              <select
+                value={prioridadActual}
+                onChange={(e) =>
+                  setPrioridadActual(e.target.value as PrioridadTrabajo)
+                }
+                disabled={!permisos.editarPrioridad}
+                className="w-full rounded border p-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {PRIORIDADES_TRABAJO.map((prioridad) => (
+                  <option key={prioridad} value={prioridad}>
+                    {prioridad}
+                  </option>
+                ))}
+              </select>
+
+              {!permisos.editarPrioridad && (
+                <p className="text-xs text-slate-500">
+                  La prioridad no puede modificarse en este estado.
+                </p>
+              )}
+
+              {permisos.editarPrioridad && prioridadActual !== trabajo.prioridad && (
+                <p className="text-xs text-amber-600">
+                  Hay cambios sin guardar
+                </p>
+              )}
+
+              <Button
+                className="w-full bg-amber-600 hover:bg-amber-700"
+                disabled={
+                  !permisos.editarPrioridad ||
+                  prioridadActual === trabajo.prioridad
+                }
+                onClick={handleActualizarPrioridad}
+              >
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Actualizar prioridad
+              </Button>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Acciones</CardTitle>
             </CardHeader>
 
             <CardContent className="space-y-2">
+              {permisos.editarOrden && (
+                !editando ? (
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={() => setEditando(true)}
+                  >
+                    <Pencil className="mr-2 text-amber-500" />
+                    Editar orden
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      className="w-full justify-start"
+                      onClick={handleGuardarCambios}
+                    >
+                      <CheckCircle className="mr-2" />
+                      Guardar cambios
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start"
+                      onClick={handleCancelarEdicion}
+                    >
+                      Cancelar edición
+                    </Button>
+                  </>
+                )
+              )}
+
               <Button
                 variant="outline"
                 className="w-full justify-start"
+                disabled={!permisos.generarPresupuesto}
                 onClick={() => setShowPresupuesto(true)}
               >
                 <FileText className="mr-2 text-orange-500" />
@@ -440,6 +632,7 @@ export function TrabajoDetalle() {
               <Button
                 variant="outline"
                 className="w-full justify-start"
+                disabled={!permisos.gestionarService}
                 onClick={() => setShowService(true)}
               >
                 <Wrench className="mr-2 text-blue-500" />
@@ -449,6 +642,7 @@ export function TrabajoDetalle() {
               <Button
                 variant="outline"
                 className="w-full justify-start"
+                disabled={!permisos.imprimir}
                 onClick={() => window.print()}
               >
                 <Printer className="mr-2 text-slate-500" />
@@ -468,7 +662,6 @@ export function TrabajoDetalle() {
             </CardContent>
           </Card>
 
-          {/* ALERTA SI ES SEGURO */}
           {trabajo.tipo === "Seguro" && (
             <Card className="border-amber-300 bg-amber-50">
               <CardHeader>
@@ -482,17 +675,39 @@ export function TrabajoDetalle() {
                 {trabajo.seguro && trabajo.seguro.length > 0 ? (
                   trabajo.seguro.map((s, i) => (
                     <div key={i} className="space-y-1">
-                      <div className="text-sm text-slate-700">Siniestro: {s.numero_siniestro}</div>
-                      {s.numero_poliza && <div className="text-sm text-slate-700">Póliza: {s.numero_poliza}</div>}
-                      {s.numero_denuncia && <div className="text-sm text-slate-700">Denuncia: {s.numero_denuncia}</div>}
-                      {s.monto_aprobado !== undefined && (
-                        <div className="text-sm text-slate-700">Monto aprobado: {s.monto_aprobado.toLocaleString("es-AR", { style: "currency", currency: "ARS" })}</div>
+                      <div className="text-sm text-slate-700">
+                        Siniestro: {s.numero_siniestro}
+                      </div>
+                      {s.numero_poliza && (
+                        <div className="text-sm text-slate-700">
+                          Póliza: {s.numero_poliza}
+                        </div>
                       )}
-                      {s.aseguradora && <div className="text-sm text-slate-700">Aseguradora: {s.aseguradora.nombre}</div>}
+                      {s.numero_denuncia && (
+                        <div className="text-sm text-slate-700">
+                          Denuncia: {s.numero_denuncia}
+                        </div>
+                      )}
+                      {s.monto_aprobado !== undefined && (
+                        <div className="text-sm text-slate-700">
+                          Monto aprobado:{" "}
+                          {s.monto_aprobado.toLocaleString("es-AR", {
+                            style: "currency",
+                            currency: "ARS",
+                          })}
+                        </div>
+                      )}
+                      {s.aseguradora && (
+                        <div className="text-sm text-slate-700">
+                          Aseguradora: {s.aseguradora.nombre}
+                        </div>
+                      )}
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-slate-700">Sin información de seguro</p>
+                  <p className="text-sm text-slate-700">
+                    Sin información de seguro
+                  </p>
                 )}
               </CardContent>
             </Card>
@@ -502,7 +717,15 @@ export function TrabajoDetalle() {
 
       {showPresupuesto && (
         <PresupuestoModal
-          trabajo={trabajo}
+          trabajo={{
+            ...trabajo,
+            tareas: trabajo.tareas?.map((tarea) => ({
+              id: tarea.id!,
+              titulo: tarea.titulo,
+              costo: tarea.costo,
+              realizada: tarea.realizada,
+            })),
+          }}
           onClose={() => setShowPresupuesto(false)}
         />
       )}

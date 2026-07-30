@@ -32,7 +32,8 @@ export async function findTrabajoById(id: string) {
       ),
       tareas:TAREAS (*),
       service:SERVICES (
-        *
+        *,
+        repuestos:SERVICE_REPUESTOS (*)
       )
     `)
     .eq('id', id)
@@ -41,9 +42,8 @@ export async function findTrabajoById(id: string) {
 }
 
 export async function createTrabajo(payload: CreateTrabajoPayload) {
-  const { seguro, tareas, service, ...ordenTrabajo } = payload;
+  const { seguro, tareas, ...ordenTrabajo } = payload;
 
-  // cliente_id ya no va en ordenTrabajo, se obtiene desde el vehículo
   const { data, error } = await supabase
     .from('ORDENES_TRABAJO')
     .insert(ordenTrabajo)
@@ -66,13 +66,14 @@ export async function createTrabajo(payload: CreateTrabajoPayload) {
           trabajo_id: trabajoId,
         }))
       );
+
     if (tareasError) throw tareasError;
   }
 
   // SEGURO
   if (seguro) {
     const { error: seguroError } = await supabase
-      .from('ORDENES_TRABAJO_SEGURO')  // nombre corregido
+      .from('ORDENES_TRABAJO_SEGURO')
       .insert({
         trabajo_id: trabajoId,
         aseguradora_id: seguro.aseguradora_id,
@@ -81,39 +82,8 @@ export async function createTrabajo(payload: CreateTrabajoPayload) {
         numero_siniestro: seguro.numero_siniestro,
         monto_aprobado: seguro.monto_aprobado,
       });
+
     if (seguroError) throw seguroError;
-  }
-
-  // SERVICE
-  if (service) {
-    const { data: serviceData, error: serviceError } = await supabase
-      .from('SERVICES') 
-      .insert({
-        trabajo_id: trabajoId,
-        kilometraje_actual: service.kilometraje_actual, 
-        aceite_utilizado: service.aceite_utilizado,
-        proximo_service_km: service.proximo_service_km,
-        proxima_fecha_service: service.proxima_fecha_service,
-        observaciones: service.observaciones,
-      })
-      .select()
-      .single();
-
-    if (serviceError) throw serviceError;
-
-    // SERVICE_REPUESTOS
-    if (service.repuestos.length > 0) {
-      const { error: repuestosError } = await supabase
-        .from('SERVICE_REPUESTOS')
-        .insert(
-          service.repuestos.map((repuesto) => ({
-            service_id: serviceData.id,
-            descripcion: repuesto,
-            cantidad: 1,
-          }))
-        );
-      if (repuestosError) throw repuestosError;
-    }
   }
 
   return data;
@@ -136,4 +106,20 @@ export async function updateTrabajo(id: string, payload: Partial<Trabajo>) {
   )
 `)
     .single();
+}
+
+export async function findTrabajosByVehiculo(vehiculoId: string) {
+  return supabase
+    .from('ORDENES_TRABAJO')
+    .select(`
+      *,
+      service:SERVICES (
+        *,
+        repuestos:SERVICE_REPUESTOS (*)
+      )
+    `)
+    .eq('vehiculo_id', vehiculoId)
+    .order('fecha_creacion', {
+      ascending: false,
+    });
 }

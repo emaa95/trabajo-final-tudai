@@ -1,11 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router";
+import { Link } from "react-router-dom";
 
-import {
-  Plus,
-  List,
-  Kanban as KanbanIcon,
-} from "lucide-react";
+import { Plus, List, Kanban as KanbanIcon } from "lucide-react";
 
 import type { DropResult } from "@hello-pangea/dnd";
 
@@ -18,11 +14,10 @@ import { TrabajoKanbanView } from "@/components/trabajos/TrabajoKanbanView";
 import { useTrabajos } from "@/hooks/useTrabajos";
 import { useDataFilters } from "@/hooks/useDataFilters";
 
-import type {
-  EstadoTrabajo,
-} from "@/types";
+import type { EstadoTrabajo } from "@/types";
 
 import { ESTADOS_TRABAJO } from "@/types";
+import { useAuth } from "@/hooks/useAuth";
 
 // ─────────────────────────────────────────────
 // Configuración de filtros
@@ -70,23 +65,12 @@ const KANBAN_FILTER_GROUPS = [
 // ─────────────────────────────────────────────
 
 export function Trabajos() {
-  const [vista, setVista] =
-    useState<"lista" | "kanban">("kanban");
+  const [vista, setVista] = useState<"lista" | "kanban">("kanban");
 
-  const {
-    trabajos,
-    loading,
-    error,
-    fetchTrabajos,
-    updateTrabajo,
-  } = useTrabajos();
+  const { trabajos, loading, error, fetchTrabajos, updateTrabajo } =
+    useTrabajos();
 
-  const {
-    search,
-    sortBy,
-    activeFilters,
-    filterProps,
-  } = useDataFilters({
+  const { search, sortBy, activeFilters, filterProps } = useDataFilters({
     defaultSort: "reciente",
     defaultFilters: {
       estado: "todos",
@@ -94,29 +78,27 @@ export function Trabajos() {
     },
   });
 
+  const { currentUser } = useAuth();
+
+  const esAdmin = currentUser?.empleado?.is_admin === true;
+
   useEffect(() => {
     fetchTrabajos();
   }, [fetchTrabajos]);
 
-  const handleDragEnd = async (
-    result: DropResult,
-  ) => {
+  const handleDragEnd = async (result: DropResult) => {
     const { destination, draggableId } = result;
 
     if (!destination) return;
 
-    const nuevoEstado =
-      destination.droppableId as EstadoTrabajo;
+    const nuevoEstado = destination.droppableId as EstadoTrabajo;
 
     try {
       await updateTrabajo(draggableId, {
         estado: nuevoEstado,
       });
     } catch (error) {
-      console.error(
-        "Error al actualizar estado:",
-        error,
-      );
+      console.error("Error al actualizar estado:", error);
     }
   };
 
@@ -128,74 +110,47 @@ export function Trabajos() {
     if (q) {
       result = result.filter(
         (t) =>
-          t.vehiculo.patente
-            .toLowerCase()
-            .includes(q) ||
-          t.vehiculo.modelo
-            .toLowerCase()
-            .includes(q) ||
-          t.vehiculo.cliente.nombre
-            .toLowerCase()
-            .includes(q),
+          t.vehiculo.patente.toLowerCase().includes(q) ||
+          t.vehiculo.modelo.toLowerCase().includes(q) ||
+          t.vehiculo.cliente.nombre.toLowerCase().includes(q),
       );
     }
 
     // Estado sólo aplica a la vista lista
     if (vista === "lista") {
-      const estado =
-        activeFilters.estado ?? "todos";
+      const estado = activeFilters.estado ?? "todos";
 
       if (estado !== "todos") {
-        result = result.filter(
-          (t) => t.estado === estado,
-        );
+        result = result.filter((t) => t.estado === estado);
       }
     }
 
-    const tipo =
-      activeFilters.tipo ?? "todos";
+    const tipo = activeFilters.tipo ?? "todos";
 
     if (tipo !== "todos") {
-      result = result.filter(
-        (t) => t.tipo === tipo,
-      );
+      result = result.filter((t) => t.tipo === tipo);
     }
 
     if (sortBy === "reciente") {
       result.sort(
         (a, b) =>
-          new Date(
-            b.fecha_ingreso,
-          ).getTime() -
-          new Date(
-            a.fecha_ingreso,
-          ).getTime(),
+          new Date(b.fecha_ingreso).getTime() -
+          new Date(a.fecha_ingreso).getTime(),
       );
     }
 
     if (sortBy === "antiguo") {
       result.sort(
         (a, b) =>
-          new Date(
-            a.fecha_ingreso,
-          ).getTime() -
-          new Date(
-            b.fecha_ingreso,
-          ).getTime(),
+          new Date(a.fecha_ingreso).getTime() -
+          new Date(b.fecha_ingreso).getTime(),
       );
     }
 
     return result;
-  }, [
-    trabajos,
-    search,
-    sortBy,
-    activeFilters,
-    vista,
-  ]);
+  }, [trabajos, search, sortBy, activeFilters, vista]);
 
-  const showLoading =
-    loading && trabajos.length === 0;
+  const showLoading = loading && trabajos.length === 0;
 
   if (showLoading) {
     return (
@@ -206,11 +161,7 @@ export function Trabajos() {
   }
 
   if (error) {
-    return (
-      <div className="p-6 text-red-500">
-        {error}
-      </div>
-    );
+    return <div className="p-6 text-red-500">{error}</div>;
   }
 
   return (
@@ -218,21 +169,15 @@ export function Trabajos() {
       {/* HEADER */}
       <div className="flex flex-col gap-4 px-6 pb-4 flex-shrink-0 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">
-            Trabajos
-          </h1>
+          <h1 className="text-3xl font-bold text-slate-900">Trabajos</h1>
 
-          <p className="mt-1 text-slate-600">
-            Gestión de trabajos del taller
-          </p>
+          <p className="mt-1 text-slate-600">Gestión de trabajos del taller</p>
         </div>
 
         <div className="flex items-center gap-2">
           <div className="flex gap-1 rounded-lg bg-slate-100 p-1">
             <button
-              onClick={() =>
-                setVista("lista")
-              }
+              onClick={() => setVista("lista")}
               className={`
                 flex items-center gap-2 px-3 py-1.5 rounded-md
                 text-sm font-medium transition-colors
@@ -248,9 +193,7 @@ export function Trabajos() {
             </button>
 
             <button
-              onClick={() =>
-                setVista("kanban")
-              }
+              onClick={() => setVista("kanban")}
               className={`
                 flex items-center gap-2 px-3 py-1.5 rounded-md
                 text-sm font-medium transition-colors
@@ -266,12 +209,19 @@ export function Trabajos() {
             </button>
           </div>
 
-          <Link to="/trabajos/nuevo">
-            <Button>
+          {esAdmin ? (
+            <Link to="/trabajos/nuevo">
+              <Button>
+                <Plus className="mr-2 size-4" />
+                Nuevo Trabajo
+              </Button>
+            </Link>
+          ) : (
+            <Button disabled>
               <Plus className="mr-2 size-4" />
               Nuevo Trabajo
             </Button>
-          </Link>
+          )}
         </div>
       </div>
 
@@ -282,19 +232,13 @@ export function Trabajos() {
           searchPlaceholder="Buscar por patente, cliente o vehículo..."
           sortOptions={SORT_OPTIONS}
           filterGroups={
-            vista === "kanban"
-              ? KANBAN_FILTER_GROUPS
-              : LIST_FILTER_GROUPS
+            vista === "kanban" ? KANBAN_FILTER_GROUPS : LIST_FILTER_GROUPS
           }
         />
       </div>
 
       {/* VISTA */}
-      {vista === "lista" && (
-        <TrabajoListView
-          trabajos={filteredTrabajos}
-        />
-      )}
+      {vista === "lista" && <TrabajoListView trabajos={filteredTrabajos} />}
 
       {vista === "kanban" && (
         <TrabajoKanbanView

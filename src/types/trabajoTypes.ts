@@ -1,55 +1,257 @@
 import type { Aseguradora } from './aseguradoraTypes';
-import type { Service, CreateServicePayload } from './serviceTypes';
+import type { Service } from './serviceTypes';
+
+export const ESTADOS_TRABAJO = [
+  "Pendiente",
+  "En reparación",
+  "En pintura",
+  "Listo para entregar",
+  "Entregado",
+  "Cancelada",
+  "Pausada",
+] as const;
 
 export type EstadoTrabajo =
-  | 'Pendiente'
-  | 'En reparación'
-  | 'En pintura'
-  | 'Listo para entregar'
-  | 'Entregado'
-  | 'Cancelada'
-  | 'Pausada';
+  (typeof ESTADOS_TRABAJO)[number];
 
-export const ESTADOS_TRABAJO: EstadoTrabajo[] = [
-  'Pendiente',
-  'En reparación',
-  'En pintura',
-  'Listo para entregar',
-  'Entregado',
-  'Cancelada',
-  'Pausada',
+export const ESTADOS_TRABAJO_BLOQUEADOS: EstadoTrabajo[] = [
+  "Entregado",
+  "Cancelada",
 ];
+
+
+export interface PermisosEstadoTrabajo {
+  editarOrden: boolean;
+  editarEstado: boolean;
+  editarPrioridad: boolean;
+
+  agregarTareas: boolean;
+  editarTareas: boolean;
+  eliminarTareas: boolean;
+  marcarTareas: boolean;
+
+  generarPresupuesto: boolean;
+  gestionarService: boolean;
+
+  imprimir: boolean;
+}
+
+
+export const PERMISOS_ESTADO_TRABAJO: Record<
+  EstadoTrabajo,
+  PermisosEstadoTrabajo
+> = {
+
+  Pendiente: {
+    editarOrden: true,
+    editarEstado: true,
+    editarPrioridad: true,
+
+    agregarTareas: true,
+    editarTareas: true,
+    eliminarTareas: true,
+    marcarTareas: true,
+
+    generarPresupuesto: true,
+    gestionarService: true,
+
+    imprimir: true,
+  },
+
+
+  "En reparación": {
+    editarOrden: true,
+    editarEstado: true,
+    editarPrioridad: true,
+
+    agregarTareas: true,
+    editarTareas: true,
+    eliminarTareas: true,
+    marcarTareas: true,
+
+    generarPresupuesto: true,
+    gestionarService: true,
+
+    imprimir: true,
+  },
+
+
+  "En pintura": {
+    editarOrden: true,
+    editarEstado: true,
+    editarPrioridad: false,
+
+    agregarTareas: true,
+    editarTareas: true,
+    eliminarTareas: true,
+    marcarTareas: true,
+
+    generarPresupuesto: true,
+    gestionarService: true,
+
+    imprimir: true,
+  },
+
+
+  Pausada: {
+    editarOrden: true,
+    editarEstado: true,
+    editarPrioridad: false,
+
+    agregarTareas: true,
+    editarTareas: true,
+    eliminarTareas: true,
+    marcarTareas: true,
+
+    generarPresupuesto: true,
+    gestionarService: true,
+
+    imprimir: true,
+  },
+
+
+  "Listo para entregar": {
+    editarOrden: false,
+    editarEstado: true,
+    editarPrioridad: false,
+
+    agregarTareas: false,
+    editarTareas: false,
+    eliminarTareas: false,
+    marcarTareas: false,
+
+    generarPresupuesto: true,
+    gestionarService: true,
+
+    imprimir: true,
+  },
+
+
+  Entregado: {
+    editarOrden: false,
+    editarEstado: false,
+    editarPrioridad: false,
+
+    agregarTareas: false,
+    editarTareas: false,
+    eliminarTareas: false,
+    marcarTareas: false,
+
+    generarPresupuesto: true,
+    gestionarService: false,
+
+    imprimir: true,
+  },
+
+
+  Cancelada: {
+    editarOrden: false,
+    editarEstado: false,
+    editarPrioridad: false,
+
+    agregarTareas: false,
+    editarTareas: false,
+    eliminarTareas: false,
+    marcarTareas: false,
+
+    generarPresupuesto: false,
+    gestionarService: false,
+
+    imprimir: true,
+  },
+};
+
+
+export const TRANSICIONES_ESTADO_TRABAJO: Record<
+  EstadoTrabajo,
+  EstadoTrabajo[]
+> = {
+
+  Pendiente: [
+    "En reparación",
+    "Cancelada",
+  ],
+
+
+  "En reparación": [
+    "En pintura",
+    "Pausada",
+    "Cancelada",
+  ],
+
+
+  "En pintura": [
+    "Listo para entregar",
+    "Pausada",
+    "Cancelada",
+  ],
+
+
+  Pausada: [
+    "En reparación",
+    "En pintura",
+    "Cancelada",
+  ],
+
+
+  "Listo para entregar": [
+    "Entregado",
+    "En reparación",
+    "En pintura",
+  ],
+
+
+  Entregado: [],
+
+
+  Cancelada: [],
+};
+
+
+export const getPermisosEstadoTrabajo = (
+  estado: EstadoTrabajo,
+): PermisosEstadoTrabajo =>
+  PERMISOS_ESTADO_TRABAJO[estado];
+
+
+export const getEstadosDisponibles = (
+  estado: EstadoTrabajo,
+): EstadoTrabajo[] => [
+  estado,
+  ...TRANSICIONES_ESTADO_TRABAJO[estado],
+];
+
+export const PRIORIDADES_TRABAJO = [
+  "Baja",
+  "Media",
+  "Alta",
+  "Urgente",
+] as const;
 
 export type PrioridadTrabajo =
-  | 'Baja'
-  | 'Media'
-  | 'Alta'
-  | 'Urgente';
+  (typeof PRIORIDADES_TRABAJO)[number];
 
-export const PRIORIDADES_TRABAJO: PrioridadTrabajo[] = [
-  'Baja',
-  'Media',
-  'Alta',
-  'Urgente',
-];
+export const TIPOS_TRABAJO = [
+  "Particular",
+  "Seguro",
+] as const;
 
 export type TipoTrabajo =
-  | 'Particular'
-  | 'Seguro';
+  (typeof TIPOS_TRABAJO)[number];
 
 export const TRABAJOS_SOLICITADOS = [
-  'Mecánica general',
-  'Electricidad',
-  'Motor',
-  'Frenos',
-  'Suspensión',
-  'Dirección',
-  'Chapa',
-  'Pintura',
-  'Service',
-  'Diagnóstico',
-  'Alineación y balanceo',
-  'Neumáticos',
+  "Mecánica general",
+  "Electricidad",
+  "Motor",
+  "Frenos",
+  "Suspensión",
+  "Dirección",
+  "Chapa",
+  "Pintura",
+  "Service",
+  "Diagnóstico",
+  "Alineación y balanceo",
+  "Neumáticos",
 ] as const;
 
 export type TrabajoSolicitado =
@@ -61,6 +263,25 @@ export interface TareaTrabajo {
   costo: number;
   realizada: boolean;
 }
+
+export type TareaTrabajoDraft = {
+  id?: string;
+  titulo: string;
+  costo: number;
+  realizada: boolean;
+  isNew?: boolean;
+};
+
+export type TrabajoDetalleDraft =
+  Omit<TrabajoDetalle, "tareas"> & {
+    tareas?: TareaTrabajoDraft[];
+  };
+
+export type CreateTareaTrabajo = {
+  titulo: string;
+  costo: number;
+  realizada: boolean;
+};
 
 export interface SeguroTrabajo {
   aseguradora_id: string;
@@ -96,7 +317,6 @@ export interface Trabajo {
 
   notas?: string;
 
-  asignado_a?: string;
 }
 
 export interface CreateTrabajoPayload {
@@ -115,13 +335,11 @@ export interface CreateTrabajoPayload {
 
   precio_total: number;
 
-  tareas: TareaTrabajo[];
+  tareas: CreateTareaTrabajo[];
 
   notas?: string;
 
   seguro?: SeguroTrabajo;
-
-  service?: CreateServicePayload;
 
   asignado_a?: string;
 
@@ -144,38 +362,6 @@ export interface FormErrors {
   numero_denuncia?: string;
 
   numero_siniestro?: string;
-}
-
-export interface TrabajoFormData {
-  cliente_id?: string;
-
-  vehiculo_id?: string;
-
-  tipo: TipoTrabajo;
-
-  estado: EstadoTrabajo;
-
-  prioridad?: PrioridadTrabajo;
-
-  fecha_ingreso: string;
-
-  trabajos_solicitados: TrabajoSolicitado[];
-
-  tareas: TareaTrabajo[];
-
-  notas?: string;
-
-  asignado_a?: string;
-
-  seguro?: {
-    aseguradora_id?: string;
-    numero_poliza?: string;
-    numero_denuncia?: string;
-    numero_siniestro?: string;
-    monto_aprobado?: number;
-  };
-
-  service?: CreateServicePayload;
 }
 
 export interface SeccionGeneralProps {
@@ -259,6 +445,7 @@ export interface TrabajoDetalle {
       email?: string;
       documento?: string;
       tipo_documento?: 'DNI' | 'CUIL' | 'CUIT';
+      direccion?: string;
     };
   };
 

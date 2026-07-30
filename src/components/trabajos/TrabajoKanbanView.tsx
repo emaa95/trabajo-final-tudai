@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { Link } from "react-router-dom";
 
 import {
   DragDropContext,
@@ -26,7 +26,8 @@ function getDiasEnTaller(fecha: string) {
   const hoy = new Date();
 
   const diff = Math.floor(
-    (hoy.getTime() - ingreso.getTime()) / (1000 * 60 * 60 * 24)
+    (hoy.getTime() - ingreso.getTime()) /
+      (1000 * 60 * 60 * 24)
   );
 
   if (diff <= 0) return "Hoy";
@@ -84,7 +85,6 @@ function TrabajoCard({ trabajo, index }: TrabajoCardProps) {
         >
           <Link to={`/trabajos/${trabajo.id}`} className="block">
             <div className="p-3">
-              {/* HEADER */}
               <div className="flex items-start justify-between gap-2">
                 <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-slate-900 text-white text-[11px] font-bold tracking-wider">
                   {vehiculo?.patente ?? "SIN PATENTE"}
@@ -99,7 +99,6 @@ function TrabajoCard({ trabajo, index }: TrabajoCardProps) {
                 </div>
               </div>
 
-              {/* CLIENTE / VEHICULO */}
               <div className="mt-3">
                 <p className="text-sm font-semibold text-slate-900 truncate">
                   {cliente?.nombre ?? "Sin cliente"}
@@ -110,10 +109,9 @@ function TrabajoCard({ trabajo, index }: TrabajoCardProps) {
                 </p>
               </div>
 
-              {/* SEGURO */}
               {trabajo.tipo === "Seguro" && seguro && (
                 <div className="inline-flex items-center gap-1 px-2 py-1 mt-2 rounded-full bg-blue-50 text-blue-700 text-[11px] font-medium max-w-full">
-                  <Shield className="size-3 flex-shrink-0" />
+                  <Shield className="size-3 shrink-0" />
 
                   <span className="truncate">
                     {seguro.aseguradora?.nombre ?? "Sin aseguradora"}
@@ -121,7 +119,6 @@ function TrabajoCard({ trabajo, index }: TrabajoCardProps) {
                 </div>
               )}
 
-              {/* FOOTER */}
               <div className="flex items-center justify-between mt-3">
                 <TipoBadge tipo={trabajo.tipo} />
 
@@ -183,7 +180,9 @@ function KanbanColumn({ estado, trabajos }: KanbanColumnProps) {
           `}
         >
           <Card className="flex flex-col h-full bg-white border-slate-200 shadow-sm overflow-hidden py-0">
-            <CardHeader className={`${config.headerClass} py-3 px-3 border-b`}>
+            <CardHeader
+              className={`${config.headerClass} py-3 px-3 border-b`}
+            >
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-2 min-w-0">
                   <Icon className="size-4 shrink-0" />
@@ -238,21 +237,32 @@ export function TrabajoKanbanView({
   trabajos,
   onDragEnd,
 }: TrabajoKanbanViewProps) {
+  const trabajosValidos = trabajos.filter(Boolean);
+
   const estadosVisibles = ESTADOS_TRABAJO.filter(
-    (estado) => estado !== "Cancelada" && estado !== "Entregado"
+    (estado) =>
+      estado !== "Cancelada" &&
+      estado !== "Entregado"
   );
 
-  const pendientes = trabajos.filter((t) => t.estado === "Pendiente").length;
-  const enProceso = trabajos.filter((t) => t.estado === "En reparación").length;
-  const entregados = trabajos.filter((t) => t.estado === "Entregado").length;
+  const pendientes = trabajosValidos.filter(
+    (t) => t.estado === "Pendiente"
+  ).length;
+
+  const enProceso = trabajosValidos.filter(
+    (t) => t.estado === "En reparación"
+  ).length;
+
+  const entregados = trabajosValidos.filter(
+    (t) => t.estado === "Entregado"
+  ).length;
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
       <div className="flex flex-col flex-1 min-h-0 px-4">
-        {/* STATS */}
         <div className="flex gap-2 mb-3 flex-wrap">
           <div className="px-3 py-1.5 rounded-full bg-slate-100 text-sm font-medium">
-            {trabajos.length} Total
+            {trabajosValidos.length} Total
           </div>
 
           <div className="px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 text-sm font-medium">
@@ -268,13 +278,14 @@ export function TrabajoKanbanView({
           </div>
         </div>
 
-        {/* BOARD */}
         <div className="flex gap-3 flex-1 min-h-0 overflow-x-auto">
           {estadosVisibles.map((estado) => (
             <KanbanColumn
               key={estado}
               estado={estado}
-              trabajos={trabajos.filter((t) => t.estado === estado)}
+              trabajos={trabajosValidos.filter(
+                (t) => t.estado === estado
+              )}
             />
           ))}
         </div>
