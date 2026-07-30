@@ -1,73 +1,61 @@
-import { serviceStore } from '@/store/serviceStore';
+import { serviceStore } from "@/store/serviceStore";
 
 export function useServices() {
-  // =========================
-  // STATE
-  // =========================
 
-  const serviceSeleccionado =
-    serviceStore(
-      (state) => state.serviceSeleccionado
-    );
+  const {
+    services,
+    serviceSeleccionado,
+    loading,
+    error,
 
-  const loading = serviceStore(
-    (state) => state.loading
-  );
+    fetchServices,
 
-  const error = serviceStore(
-    (state) => state.error
-  );
+    getServiceByIdService,
+    getServiceByTrabajoIdService,
 
-  // =========================
-  // ACTIONS
-  // =========================
+    createServiceService,
+    updateServiceService,
 
-  const getServiceByIdService =
-    serviceStore(
-      (state) =>
-        state.getServiceByIdService
-    );
+    addRepuestoService,
+    updateRepuestoService,
+    deleteRepuestoService,
 
-  const getServiceByTrabajoIdService =
-    serviceStore(
-      (state) =>
-        state.getServiceByTrabajoIdService
-    );
+    setServiceSeleccionado,
+    clearError,
 
-  const createServiceService =
-    serviceStore(
-      (state) =>
-        state.createServiceService
-    );
+  } = serviceStore();
 
-  const updateServiceService =
-    serviceStore(
-      (state) =>
-        state.updateServiceService
-    );
-
-  const setServiceSeleccionado =
-    serviceStore(
-      (state) =>
-        state.setServiceSeleccionado
-    );
-
-  const clearError = serviceStore(
-    (state) => state.clearError
-  );
 
   return {
+
+    // listado
+    services,
+    fetchServices,
+
     // state
     serviceSeleccionado,
     loading,
     error,
 
-    // actions
+
+    // service
     getServiceByIdService,
     getServiceByTrabajoIdService,
+
     createServiceService,
     updateServiceService,
+
+
+    // repuestos
+    addRepuestoService,
+    updateRepuestoService,
+    deleteRepuestoService,
+
+
+    // general
     setServiceSeleccionado,
     clearError,
+
   };
+
 }

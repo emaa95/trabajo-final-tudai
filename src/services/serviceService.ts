@@ -4,75 +4,112 @@ import {
   findServiceByTrabajoId,
   createService,
   updateService,
-} from '@/repositories/serviceRepository';
+} from "@/repositories/serviceRepository";
 
 import type {
   Service,
+  ServiceDetalle,
   CreateServicioDto,
   UpdateServicioDto,
-} from '@/types';
+} from "@/types";
 
 export async function getServicesService() {
-  const { data, error } = await findAllServices();
+  const { data, error } =
+    await findAllServices();
 
   if (error) throw error;
 
-  return data as Service[];
+  return data as ServiceDetalle[];
 }
 
-export async function getServiceByIdService(id: string) {
-  if (!id) throw new Error('ID inválido');
+export async function getServiceByIdService(
+  id: string
+) {
+  if (!id) {
+    throw new Error("ID inválido");
+  }
 
-  const { data, error } = await findServiceById(id);
+  const { data, error } =
+    await findServiceById(id);
 
   if (error) throw error;
 
-  return data as Service;
+  if (!data) {
+    throw new Error("Service no encontrado");
+  }
+
+  return data as ServiceDetalle;
 }
 
 export async function getServiceByTrabajoIdService(
-  trabajo_id: string
+  trabajoId: string
 ) {
-  if (!trabajo_id) throw new Error('trabajo_id inválido');
+  if (!trabajoId) {
+    throw new Error("trabajo_id inválido");
+  }
 
   const { data, error } =
-    await findServiceByTrabajoId(trabajo_id);
+    await findServiceByTrabajoId(trabajoId);
 
   if (error) throw error;
 
-  return data;
+  if (!data) {
+    throw new Error("Service no encontrado");
+  }
+
+  return data as ServiceDetalle;
 }
 
 export async function createServiceService(
   payload: CreateServicioDto
 ) {
   if (!payload.trabajo_id) {
-    throw new Error('trabajo_id es obligatorio');
+    throw new Error(
+      "trabajo_id es obligatorio"
+    );
   }
 
-  const { data, error } = await createService({
-    trabajo_id: payload.trabajo_id,
-    kilometraje_actual: payload.kilometraje_actual ?? null,
-    aceite_utilizado: payload.aceite_utilizado ?? null,
-    proximo_service_km: payload.proximo_service_km ?? null,
-    proxima_fecha_service: payload.proxima_fecha_service ?? null,
-    observaciones: payload.observaciones ?? null,
-  });
+  const { data, error } =
+    await createService(payload);
 
   if (error) throw error;
 
-  return data as Service;
+  if (!data) {
+    throw new Error(
+      "No se pudo crear el service"
+    );
+  }
+
+  const serviceCompleto =
+    await getServiceByIdService(data.id);
+
+  return serviceCompleto;
 }
 
 export async function updateServiceService(
   id: string,
   payload: UpdateServicioDto
 ) {
-  if (!id) throw new Error('ID inválido');
+  if (!id) {
+    throw new Error("ID inválido");
+  }
 
-  const { data, error } = await updateService(id, payload);
+  const { data, error } =
+    await updateService(
+      id,
+      payload
+    );
 
   if (error) throw error;
 
-  return data as Service;
+  if (!data) {
+    throw new Error(
+      "No se pudo actualizar el service"
+    );
+  }
+
+  const serviceCompleto =
+    await getServiceByIdService(data.id);
+
+  return serviceCompleto;
 }

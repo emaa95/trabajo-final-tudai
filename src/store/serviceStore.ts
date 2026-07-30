@@ -1,24 +1,39 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
 import type {
-  Service,
+  ServiceDetalle,
   CreateServicioDto,
   UpdateServicioDto,
-} from '@/types';
+  ServiceRepuesto,
+  CreateServiceRepuestoDto,
+  UpdateServiceRepuestoDto,
+  EstadoTrabajo,
+} from "@/types";
 
 import {
+  getServicesService,
   getServiceByIdService,
   getServiceByTrabajoIdService,
   createServiceService,
   updateServiceService,
-} from '@/services/serviceService';
+} from "@/services/serviceService";
+
+import {
+  createServiceRepuestoService,
+  updateServiceRepuestoService,
+  deleteServiceRepuestoService,
+} from "@/services/serviceRepuestosService";
 
 interface ServiceStore {
-  serviceSeleccionado: Service | null;
+  services: ServiceDetalle[];
+
+  serviceSeleccionado: ServiceDetalle | null;
 
   loading: boolean;
 
   error: string | null;
+
+  fetchServices: () => Promise<void>;
 
   getServiceByIdService: (
     id: string
@@ -30,15 +45,29 @@ interface ServiceStore {
 
   createServiceService: (
     payload: CreateServicioDto
-  ) => Promise<Service>;
+  ) => Promise<ServiceDetalle>;
 
   updateServiceService: (
     id: string,
     payload: UpdateServicioDto
-  ) => Promise<Service>;
+  ) => Promise<ServiceDetalle>;
+
+  addRepuestoService: (
+    payload: CreateServiceRepuestoDto
+  ) => Promise<ServiceRepuesto>;
+
+  updateRepuestoService: (
+    id: string,
+    payload: UpdateServiceRepuestoDto
+  ) => Promise<ServiceRepuesto>;
+
+  deleteRepuestoService: (
+    id: string,
+    estadoTrabajo: EstadoTrabajo
+  ) => Promise<void>;
 
   setServiceSeleccionado: (
-    service: Service | null
+    service: ServiceDetalle | null
   ) => void;
 
   clearError: () => void;
@@ -46,6 +75,9 @@ interface ServiceStore {
 
 export const serviceStore =
   create<ServiceStore>((set) => ({
+
+    services: [],
+
     serviceSeleccionado: null,
 
     loading: false,
@@ -53,44 +85,84 @@ export const serviceStore =
     error: null,
 
     // =========================
-    // GET BY ID
+    // GET ALL
     // =========================
 
-    getServiceByIdService: async (
-      id: string
-    ) => {
+    fetchServices: async () => {
       try {
         set({
           loading: true,
           error: null,
         });
 
-        const service =
-          await getServiceByIdService(id);
-
+        const services =
+          await getServicesService();
+        console.log(services);
         set({
-          serviceSeleccionado: service,
+          services,
           loading: false,
         });
+
       } catch (error) {
+
         set({
           error:
             error instanceof Error
               ? error.message
-              : 'Error al obtener service',
+              : "Error al obtener servicios",
 
           loading: false,
         });
+
       }
     },
 
     // =========================
-    // GET BY TRABAJO ID
+    // GET BY ID
+    // =========================
+
+    getServiceByIdService:
+      async (id) => {
+
+        try {
+
+          set({
+            loading: true,
+            error: null,
+          });
+
+          const service =
+            await getServiceByIdService(id);
+
+          set({
+            serviceSeleccionado: service,
+            loading: false,
+          });
+
+        } catch (error) {
+
+          set({
+            error:
+              error instanceof Error
+                ? error.message
+                : "Error al obtener service",
+
+            loading: false,
+          });
+
+        }
+
+      },
+
+    // =========================
+    // GET BY TRABAJO
     // =========================
 
     getServiceByTrabajoIdService:
-      async (trabajoId: string) => {
+      async (trabajoId) => {
+
         try {
+
           set({
             loading: true,
             error: null,
@@ -102,21 +174,23 @@ export const serviceStore =
             );
 
           set({
-            serviceSeleccionado:
-              service,
-
+            serviceSeleccionado: service,
             loading: false,
           });
+
         } catch (error) {
+
           set({
             error:
               error instanceof Error
                 ? error.message
-                : 'Error al obtener service',
+                : "Error al obtener service",
 
             loading: false,
           });
+
         }
+
       },
 
     // =========================
@@ -125,7 +199,9 @@ export const serviceStore =
 
     createServiceService:
       async (payload) => {
+
         try {
+
           set({
             loading: true,
             error: null,
@@ -136,19 +212,27 @@ export const serviceStore =
               payload
             );
 
-          set({
-            serviceSeleccionado:
+          set((state) => ({
+
+            serviceSeleccionado: service,
+
+            services: [
               service,
+              ...state.services,
+            ],
 
             loading: false,
-          });
+
+          }));
 
           return service;
+
         } catch (error) {
+
           const mensaje =
             error instanceof Error
               ? error.message
-              : 'Error al crear service';
+              : "Error al crear service";
 
           set({
             error: mensaje,
@@ -156,7 +240,9 @@ export const serviceStore =
           });
 
           throw error;
+
         }
+
       },
 
     // =========================
@@ -164,8 +250,13 @@ export const serviceStore =
     // =========================
 
     updateServiceService:
-      async (id, payload) => {
+      async (
+        id,
+        payload
+      ) => {
+
         try {
+
           set({
             loading: true,
             error: null,
@@ -177,19 +268,30 @@ export const serviceStore =
               payload
             );
 
-          set({
-            serviceSeleccionado:
-              service,
+          set((state) => ({
+
+            serviceSeleccionado: service,
+
+            services:
+              state.services.map(
+                (item) =>
+                  item.id === service.id
+                    ? service
+                    : item
+              ),
 
             loading: false,
-          });
+
+          }));
 
           return service;
+
         } catch (error) {
+
           const mensaje =
             error instanceof Error
               ? error.message
-              : 'Error al actualizar service';
+              : "Error al actualizar service";
 
           set({
             error: mensaje,
@@ -197,29 +299,145 @@ export const serviceStore =
           });
 
           throw error;
+
         }
+
+      },
+
+    // =========================
+    // CREATE REPUESTO
+    // =========================
+
+    addRepuestoService:
+      async (payload) => {
+
+        const repuesto =
+          await createServiceRepuestoService(
+            payload
+          );
+
+        set((state) => ({
+
+          serviceSeleccionado:
+            state.serviceSeleccionado
+              ? {
+
+                  ...state.serviceSeleccionado,
+
+                  repuestos: [
+                    ...state.serviceSeleccionado.repuestos,
+                    repuesto,
+                  ],
+
+                }
+              : null,
+
+        }));
+
+        return repuesto;
+
+      },
+
+    // =========================
+    // UPDATE REPUESTO
+    // =========================
+
+    updateRepuestoService:
+      async (
+        id,
+        payload
+      ) => {
+
+        const repuesto =
+          await updateServiceRepuestoService(
+            id,
+            payload
+          );
+
+        set((state) => ({
+
+          serviceSeleccionado:
+            state.serviceSeleccionado
+              ? {
+
+                  ...state.serviceSeleccionado,
+
+                  repuestos:
+                    state.serviceSeleccionado.repuestos.map(
+                      (item) =>
+                        item.id === id
+                          ? repuesto
+                          : item
+                    ),
+
+                }
+              : null,
+
+        }));
+
+        return repuesto;
+
+      },
+
+    // =========================
+    // DELETE REPUESTO
+    // =========================
+
+    deleteRepuestoService:
+      async (
+        id,
+        estadoTrabajo
+      ) => {
+
+        await deleteServiceRepuestoService(
+          id,
+          estadoTrabajo
+        );
+
+        set((state) => ({
+
+          serviceSeleccionado:
+            state.serviceSeleccionado
+              ? {
+
+                  ...state.serviceSeleccionado,
+
+                  repuestos:
+                    state.serviceSeleccionado.repuestos.filter(
+                      (item) =>
+                        item.id !== id
+                    ),
+
+                }
+              : null,
+
+        }));
+
       },
 
     // =========================
     // SELECT
     // =========================
 
-    setServiceSeleccionado: (
-      service
-    ) => {
-      set({
-        serviceSeleccionado:
-          service,
-      });
-    },
+    setServiceSeleccionado:
+      (service) => {
+
+        set({
+          serviceSeleccionado: service,
+        });
+
+      },
 
     // =========================
     // CLEAR ERROR
     // =========================
 
     clearError: () => {
+
       set({
         error: null,
       });
+
     },
+
   }));
