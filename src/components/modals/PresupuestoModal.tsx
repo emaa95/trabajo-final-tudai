@@ -13,9 +13,11 @@ import { Button } from '@/components/ui/button';
 
 interface PresupuestoModalProps {
   trabajo: TrabajoDetalle;
-  
+
   onClose: () => void;
 }
+
+type CategoriaItem = 'mano_obra' | 'mecanica' | 'repuestos';
 
 export function PresupuestoModal({
   trabajo,
@@ -23,35 +25,65 @@ export function PresupuestoModal({
 }: PresupuestoModalProps) {
   const printRef =
     useRef<HTMLDivElement>(null);
-  
+
   const seguro =
-  trabajo.seguro?.[0];
+    trabajo.seguro?.[0];
 
-  const items =
-  trabajo.tareas?.map(
-    (tarea) => ({
-      descripcion: tarea.titulo,
-      cantidad: 1,
-      precioUnitario:
-        tarea.costo,
-    })
-  ) ?? [];
+  // Agrupamos las tareas por categoría. Si una tarea no trae `categoria`,
+  // cae por defecto en "Mano de Obra".
+  const todosLosItems =
+    trabajo.tareas?.map(
+      (tarea) => ({
+        descripcion: tarea.titulo,
+        cantidad: 1,
+        precioUnitario: tarea.costo,
+        categoria:
+          ((tarea as { categoria?: CategoriaItem })
+            .categoria ??
+            'mano_obra') as CategoriaItem,
+      })
+    ) ?? [];
 
-  const subtotal = items.reduce(
-    (acc, item) =>
-      acc +
-      item.cantidad *
-        item.precioUnitario,
-    0
-  );
+  const itemsPorCategoria = (
+    categoria: CategoriaItem
+  ) =>
+    todosLosItems.filter(
+      (item) =>
+        item.categoria === categoria
+    );
 
-  const iva = subtotal * 0.21;
+  const sumar = (
+    items: typeof todosLosItems
+  ) =>
+    items.reduce(
+      (acc, item) =>
+        acc +
+        item.cantidad *
+          item.precioUnitario,
+      0
+    );
 
-  const total =
-    subtotal + iva;
+  const manoDeObra =
+    itemsPorCategoria('mano_obra');
+  const mecanica =
+    itemsPorCategoria('mecanica');
+  const repuestos =
+    itemsPorCategoria('repuestos');
+
+  const totalManoDeObra =
+    sumar(manoDeObra);
+  const totalMecanica =
+    sumar(mecanica);
+  const totalRepuestos =
+    sumar(repuestos);
+
+  const totalPresupuesto =
+    totalManoDeObra +
+    totalMecanica +
+    totalRepuestos;
 
   const montoAprobado =
-  seguro?.monto_aprobado ?? 0;
+    seguro?.monto_aprobado ?? 0;
 
   const formatMonto = (
     monto: number
@@ -99,6 +131,56 @@ export function PresupuestoModal({
     window.location.reload();
   };
 
+  const SeccionItems = ({
+    titulo,
+    items,
+    total,
+  }: {
+    titulo: string;
+    items: typeof todosLosItems;
+    total: number;
+  }) => (
+    <div className="mb-6">
+      <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 border-b border-slate-300 pb-1">
+        {titulo}
+      </h3>
+
+      {items.length === 0 ? (
+        <p className="text-sm text-slate-400 italic py-2">
+          Sin ítems cargados
+        </p>
+      ) : (
+        <table className="w-full text-sm">
+          <tbody>
+            {items.map((item, idx) => (
+              <tr
+                key={idx}
+                className="border-b border-slate-100"
+              >
+                <td className="py-1.5 text-slate-700">
+                  {item.descripcion}
+                </td>
+
+                <td className="py-1.5 text-right text-slate-700 w-32">
+                  {formatMonto(
+                    item.precioUnitario
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      <div className="flex justify-end mt-1">
+        <div className="flex justify-between w-48 font-semibold text-slate-900">
+          <span>TOTAL</span>
+          <span>{formatMonto(total)}</span>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
@@ -112,9 +194,7 @@ export function PresupuestoModal({
             <Button
               variant="outline"
               size="sm"
-              onClick={
-                handlePrint
-              }
+              onClick={handlePrint}
             >
               <Printer className="size-4 mr-2" />
               Imprimir
@@ -123,9 +203,7 @@ export function PresupuestoModal({
             <Button
               variant="ghost"
               size="icon"
-              onClick={
-                onClose
-              }
+              onClick={onClose}
             >
               <X className="size-5" />
             </Button>
@@ -134,98 +212,110 @@ export function PresupuestoModal({
 
         <div className="overflow-y-auto flex-1 p-6">
           <div ref={printRef}>
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-8">
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="size-10 rounded-lg bg-slate-900 flex items-center justify-center">
-                    <span className="text-white font-bold text-lg">
-                      C
-                    </span>
-                  </div>
+            {/* Encabezado del taller, igual al del papel */}
+            <div className="mb-6 pb-4 border-b-2 border-slate-900 text-center">
+              <p className="font-bold text-slate-900 text-xl uppercase tracking-wide">
+                C.A.D.I Taller de Chapa y Pintura
+              </p>
 
-                  <div>
-                    <p className="font-bold text-slate-900 text-lg">
-                      Chapa &
-                      Pintura Pro
-                    </p>
+              <p className="text-sm text-slate-700 mt-1">
+                de Alexis Godoy
+              </p>
 
-                    <p className="text-sm text-slate-500">
-                      Taller
-                      Automotriz
-                    </p>
-                  </div>
+              <p className="text-sm text-slate-600">
+                CUIT 20425119436
+              </p>
+
+              <p className="text-sm text-slate-600">
+                Santa Fe 1285 · Tancacha - Córdoba
+              </p>
+
+              <p className="text-sm text-slate-600">
+                Tel: 03571-460039 / 15610862
+              </p>
+            </div>
+
+            {/* Datos del solicitante / vehículo, en el formato del papel:
+                Solicitante / Fecha, Dirección / Telefono, Veh. Marca y Mod / Dominio */}
+            <div className="border border-slate-200 rounded-lg divide-y divide-slate-200 mb-6">
+              <div className="grid grid-cols-2 divide-x divide-slate-200">
+                <div className="px-3 py-2">
+                  <span className="text-xs text-slate-500 uppercase tracking-wide mr-1">
+                    Solicitante:
+                  </span>
+                  <span className="text-sm font-medium text-slate-900">
+                    {
+                      trabajo.vehiculo
+                        .cliente.nombre
+                    }
+                  </span>
                 </div>
 
-                <p className="text-sm text-slate-600">
-                  Av.
-                  Corrientes
-                  1234,
-                  Buenos
-                  Aires
-                </p>
-
-                <p className="text-sm text-slate-600">
-                  Tel: +54 11
-                  4000-0000
-                </p>
-
-                <p className="text-sm text-slate-600">
-                  chapypinturapro@email.com
-                </p>
+                <div className="px-3 py-2">
+                  <span className="text-xs text-slate-500 uppercase tracking-wide mr-1">
+                    Fecha:
+                  </span>
+                  <span className="text-sm font-medium text-slate-900">
+                    {formatFecha(
+                      new Date()
+                        .toISOString()
+                        .split('T')[0]
+                    )}
+                  </span>
+                </div>
               </div>
-              
-              <div className="sm:text-right">
-                <p className="text-2xl font-bold text-slate-900">
-                  PRESUPUESTO
-                </p>
 
-                <p className="text-slate-600 text-sm">
-                  N° PRES-
-                  {trabajo.id}
-                </p>
+              <div className="grid grid-cols-2 divide-x divide-slate-200">
+                <div className="px-3 py-2">
+                  <span className="text-xs text-slate-500 uppercase tracking-wide mr-1">
+                    Dirección:
+                  </span>
+                  <span className="text-sm font-medium text-slate-900">
+                    {trabajo.vehiculo.cliente.direccion ??
+                      '—'}
+                  </span>
+                </div>
 
-                <p className="text-slate-600 text-sm mt-1">
-                  Fecha:{' '}
-                  {formatFecha(
-                    new Date()
-                      .toISOString()
-                      .split(
-                        'T'
-                      )[0]
-                  )}
-                </p>
+                <div className="px-3 py-2">
+                  <span className="text-xs text-slate-500 uppercase tracking-wide mr-1">
+                    Telefono:
+                  </span>
+                  <span className="text-sm font-medium text-slate-900">
+                    {
+                      trabajo.vehiculo
+                        .cliente.telefono
+                    }
+                  </span>
+                </div>
+              </div>
 
-                <div className="mb-6">
-  <h3 className="font-semibold">
-    Datos del Cliente
-  </h3>
+              <div className="grid grid-cols-2 divide-x divide-slate-200">
+                <div className="px-3 py-2">
+                  <span className="text-xs text-slate-500 uppercase tracking-wide mr-1">
+                    Veh. Marca y Mod:
+                  </span>
+                  <span className="text-sm font-medium text-slate-900">
+                    {trabajo.vehiculo.marca}{' '}
+                    {trabajo.vehiculo.modelo}
+                  </span>
+                </div>
 
-  <p>{trabajo.vehiculo.cliente.nombre}</p>
-
-  <p>{trabajo.vehiculo.cliente.telefono}</p>
-</div>
-
-<div className="mb-6">
-  <h3 className="font-semibold">
-    Datos del Vehículo
-  </h3>
-
-  <p>
-    {trabajo.vehiculo.marca} {trabajo.vehiculo.modelo}
-  </p>
-
-  <p>{trabajo.vehiculo.patente}</p>
-</div>
+                <div className="px-3 py-2">
+                  <span className="text-xs text-slate-500 uppercase tracking-wide mr-1">
+                    Dominio:
+                  </span>
+                  <span className="text-sm font-medium text-slate-900">
+                    {trabajo.vehiculo.patente}
+                  </span>
+                </div>
               </div>
             </div>
 
-            {trabajo.tipo ===
-              'Seguro' &&
+            {trabajo.tipo === 'Seguro' &&
               trabajo.seguro && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                   <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-2">
-                    Información
-                    del Seguro
+                    Información del Seguro
                   </p>
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
@@ -236,8 +326,7 @@ export function PresupuestoModal({
 
                       <p className="font-semibold text-slate-900">
                         {
-                            seguro
-                            ?.aseguradora
+                          seguro?.aseguradora
                             ?.nombre
                         }
                       </p>
@@ -245,27 +334,23 @@ export function PresupuestoModal({
 
                     <div>
                       <p className="text-slate-500">
-                        N°
-                        Siniestro
+                        N° Siniestro
                       </p>
 
                       <p className="font-semibold text-slate-900">
                         {
-                          seguro
-                            ?.numero_siniestro
+                          seguro?.numero_siniestro
                         }
                       </p>
                     </div>
 
                     <div>
                       <p className="text-slate-500">
-                        Monto
-                        Aprobado
+                        Monto Aprobado
                       </p>
 
                       <p className="font-semibold text-green-700">
-                        {montoAprobado >
-                        0
+                        {montoAprobado > 0
                           ? formatMonto(
                               montoAprobado
                             )
@@ -276,92 +361,91 @@ export function PresupuestoModal({
                 </div>
               )}
 
-            <div className="flex justify-end">
-              <div className="w-full sm:w-72 space-y-2">
-                <div className="flex justify-between">
-                  <span>
-                    Subtotal
-                  </span>
+            {/* Las tres secciones del papel */}
+            <SeccionItems
+              titulo="Mano de Obra"
+              items={manoDeObra}
+              total={totalManoDeObra}
+            />
 
-                  <span>
-                    {formatMonto(
-                      subtotal
-                    )}
-                  </span>
-                </div>
+            <SeccionItems
+              titulo="Mecánica"
+              items={mecanica}
+              total={totalMecanica}
+            />
 
-                <div className="flex justify-between">
-                  <span>
-                    IVA
-                    (21%)
-                  </span>
+            <SeccionItems
+              titulo="Repuestos"
+              items={repuestos}
+              total={totalRepuestos}
+            />
 
-                  <span>
-                    {formatMonto(
-                      iva
-                    )}
-                  </span>
-                </div>
-
-                <div className="border-t pt-2 flex justify-between font-bold">
-                  <span>
-                    TOTAL
-                  </span>
-
-                  <span>
-                    {formatMonto(
-                      total
-                    )}
-                  </span>
-                </div>
-
-                {trabajo.tipo ===
-                  'Seguro' &&
-                  trabajo.seguro &&
-                  montoAprobado >
-                    0 && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-2">
-                      <div className="flex justify-between text-sm font-semibold text-green-800">
-                        <span>
-                          Monto
-                          cubierto
-                          por
-                          seguro
-                        </span>
-
-                        <span>
-                          {formatMonto(
-                            Math.min(
-                              montoAprobado,
-                              total
-                            )
-                          )}
-                        </span>
-                      </div>
-
-                      {total >
-                        montoAprobado && (
-                        <div className="flex justify-between text-sm text-amber-700 mt-1">
-                          <span>
-                            Diferencia
-                            a
-                            cargo
-                            del
-                            cliente
-                          </span>
-
-                          <span>
-                            {formatMonto(
-                              total -
-                                montoAprobado
-                            )}
-                          </span>
-                        </div>
-                      )}
-                    </div>
+            {/* Total general */}
+            <div className="border-t-2 border-slate-900 pt-3 flex justify-end">
+              <div className="flex justify-between w-64 text-lg font-bold text-slate-900">
+                <span>
+                  TOTAL PRESUPUESTO
+                </span>
+                <span>
+                  {formatMonto(
+                    totalPresupuesto
                   )}
+                </span>
               </div>
             </div>
+
+            {trabajo.tipo === 'Seguro' &&
+              trabajo.seguro &&
+              montoAprobado > 0 && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-3">
+                  <div className="flex justify-between text-sm font-semibold text-green-800">
+                    <span>
+                      Monto cubierto por
+                      seguro
+                    </span>
+
+                    <span>
+                      {formatMonto(
+                        Math.min(
+                          montoAprobado,
+                          totalPresupuesto
+                        )
+                      )}
+                    </span>
+                  </div>
+
+                  {totalPresupuesto >
+                    montoAprobado && (
+                    <div className="flex justify-between text-sm text-amber-700 mt-1">
+                      <span>
+                        Diferencia a cargo
+                        del cliente
+                      </span>
+
+                      <span>
+                        {formatMonto(
+                          totalPresupuesto -
+                            montoAprobado
+                        )}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+            {/* Leyenda legal, igual a la del papel */}
+            <p className="text-xs text-slate-500 mt-6 leading-relaxed">
+              Los presupuestos están sujetos
+              a ajustes sin previo aviso y
+              tienen una validez de 15 días.
+              Los mismos están calculados en
+              base a repuestos originales y
+              de no serlo puede variar el
+              costo de mano de obra.
+              <br />
+              Los trabajos con repuestos no
+              originales no tienen garantía.
+            </p>
           </div>
         </div>
 
@@ -373,14 +457,9 @@ export function PresupuestoModal({
             Cerrar
           </Button>
 
-          <Button
-            onClick={
-              handlePrint
-            }
-          >
+          <Button onClick={handlePrint}>
             <Printer className="size-4 mr-2" />
-            Imprimir
-            Presupuesto
+            Imprimir Presupuesto
           </Button>
         </div>
       </div>
