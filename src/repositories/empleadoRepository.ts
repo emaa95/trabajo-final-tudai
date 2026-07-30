@@ -40,6 +40,7 @@ interface CreateEmpleadoPayload {
   telefono: string;
   cargo: string;
   taller_id?: string | null;
+  is_admin?: boolean;
 }
 
 export async function createEmpleado(
@@ -49,7 +50,7 @@ export async function createEmpleado(
     .from('EMPLEADOS')
     .insert({
       ...payload,
-      is_admin: false, 
+      is_admin: payload.is_admin ?? false,
       activo: true,
     })
     .select()
@@ -61,5 +62,27 @@ export async function getEmpleadoByDni(dni: string) {
     .from('EMPLEADOS')
     .select('*')
     .eq('dni', dni)
+    .maybeSingle();
+}
+
+export async function getEmpleadoByAuthUserId(
+  authUserId: string
+) {
+  return supabase
+    .from('EMPLEADOS')
+    .select(`
+      id,
+      auth_user_id,
+      nombre,
+      apellido,
+      dni,
+      telefono,
+      cargo,
+      activo,
+      taller_id,
+      is_admin,
+      fecha_ingreso
+    `)
+    .eq('auth_user_id', authUserId)
     .maybeSingle();
 }

@@ -1,8 +1,4 @@
-import {
-  Pencil,
-  UserCheck,
-  UserX,
-} from "lucide-react";
+import { Pencil, UserCheck, UserX, UserPlus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -12,11 +8,13 @@ import type { DataTableColumn } from "@/components/common/DataTable";
 interface CreateEmpleadoColumnsProps {
   onEditar: (empleado: Empleado) => void;
   onToggleActivo: (empleado: Empleado) => void;
+  onDarAcceso: (empleado: Empleado) => void;
 }
 
 export function createEmpleadoColumns({
   onEditar,
   onToggleActivo,
+  onDarAcceso,
 }: CreateEmpleadoColumnsProps): DataTableColumn<Empleado>[] {
   return [
     {
@@ -57,9 +55,7 @@ export function createEmpleadoColumns({
       header: "Cargo",
 
       render: (empleado) => (
-        <span className="font-medium">
-          {empleado.cargo}
-        </span>
+        <span className="font-medium">{empleado.cargo}</span>
       ),
     },
 
@@ -88,6 +84,22 @@ export function createEmpleadoColumns({
     },
 
     {
+      key: "acceso",
+      header: "Acceso",
+
+      render: (empleado) =>
+        empleado.auth_user_id ? (
+          <span className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">
+            Con acceso
+          </span>
+        ) : (
+          <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+            Sin acceso
+          </span>
+        ),
+    },
+
+    {
       key: "acciones",
       header: "Acciones",
 
@@ -100,6 +112,17 @@ export function createEmpleadoColumns({
           >
             <Pencil className="h-4 w-4" />
           </Button>
+
+          {!empleado.auth_user_id && (
+            <Button
+              size="icon"
+              variant="outline"
+              onClick={() => onDarAcceso(empleado)}
+              title="Dar acceso"
+            >
+              <UserPlus className="h-4 w-4" />
+            </Button>
+          )}
 
           <Button
             size="icon"

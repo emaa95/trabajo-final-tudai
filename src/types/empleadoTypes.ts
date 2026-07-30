@@ -31,12 +31,13 @@ export interface Empleado {
 
   fecha_ingreso: string;
 
-  auth_user_id?: string | null;
+  auth_user_id: string | null;
 
   taller_id: string;
 }
 
 export interface CreateEmpleadoDto {
+  auth_user_id?: string | null;
   nombre: string;
   apellido: string;
 
@@ -46,8 +47,6 @@ export interface CreateEmpleadoDto {
   cargo: CargoEmpleado;
 
   taller_id?: string | null;
-
-  auth_user_id?: string | null;
 }
 
 export interface UpdateEmpleadoDto {
