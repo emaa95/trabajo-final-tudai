@@ -87,3 +87,20 @@ export interface SeccionSeguroProps {
     monto: string
   ) => void;
 }
+
+export interface ModalAseguradoraProps {
+  open: boolean;
+
+  aseguradora?: Aseguradora | null;
+
+  onClose: () => void;
+
+  onCreated: (
+    aseguradora: CreateAseguradoraDto
+  ) => Promise<void>;
+
+  onUpdated?: (
+    id: string,
+    data: UpdateAseguradoraDto
+  ) => Promise<void>;
+}

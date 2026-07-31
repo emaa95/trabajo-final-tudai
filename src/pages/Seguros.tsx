@@ -2,7 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 
-import { Plus, Shield, ShieldCheck, ShieldOff } from "lucide-react";
+import {
+  Plus,
+  Shield,
+  ShieldCheck,
+  ShieldOff,
+} from "lucide-react";
 
 import { sileo } from "sileo";
 
@@ -19,6 +24,9 @@ import { createAseguradoraColumns } from "@/components/aseguradoras/AseguradoraC
 
 import { ModalAseguradora } from "@/components/modals/ModalAseguradora";
 
+import type { Aseguradora } from "@/types";
+
+
 const SORT_OPTIONS = [
   {
     value: "nombre",
@@ -29,6 +37,7 @@ const SORT_OPTIONS = [
     label: "Más reciente",
   },
 ];
+
 
 const FILTER_GROUPS = [
   {
@@ -50,159 +59,452 @@ const FILTER_GROUPS = [
   },
 ];
 
+
 export function Seguros() {
-  const { aseguradoras, fetchAseguradoras, loading, error } = useAseguradoras();
+
+  const {
+    aseguradoras,
+    fetchAseguradoras,
+    addAseguradora,
+    editAseguradora,
+    loading,
+    error,
+  } = useAseguradoras();
+
 
   const [open, setOpen] = useState(false);
 
-  const { search, sortBy, activeFilters, filterProps } = useDataFilters({
+  const [
+    aseguradoraAEditar,
+    setAseguradoraAEditar,
+  ] = useState<Aseguradora | null>(null);
+
+
+
+  const {
+    search,
+    sortBy,
+    activeFilters,
+    filterProps,
+  } = useDataFilters({
     defaultSort: "nombre",
     defaultFilters: {
       estado: "todas",
     },
   });
 
+
+
   useEffect(() => {
     fetchAseguradoras();
   }, [fetchAseguradoras]);
 
+
+
   useEffect(() => {
+
     if (error) {
       sileo.error({
         title: "Error al cargar aseguradoras",
         description: error,
       });
     }
+
   }, [error]);
 
+
+
+  const handleCambiarEstado = async (
+    aseguradora: Aseguradora,
+  ) => {
+
+    try {
+
+      await editAseguradora(
+        aseguradora.id,
+        {
+          activa: !aseguradora.activa,
+        },
+      );
+
+
+      sileo.success({
+        title: aseguradora.activa
+          ? "Aseguradora desactivada"
+          : "Aseguradora activada",
+
+        description:
+          aseguradora.activa
+            ? "La aseguradora fue desactivada correctamente."
+            : "La aseguradora fue activada correctamente.",
+      });
+
+
+      await fetchAseguradoras();
+
+
+    } catch(error) {
+
+      console.error(error);
+
+      sileo.error({
+        title: "Error",
+        description:
+          "No se pudo cambiar el estado de la aseguradora.",
+      });
+
+    }
+
+  };
+
+
+
   const columns = useMemo(
+
     () =>
       createAseguradoraColumns({
+
         onVerDetalle: (aseguradora) => {
-          console.log("ver detalle", aseguradora);
+          console.log(
+            "ver detalle",
+            aseguradora,
+          );
         },
+
 
         onEditar: (aseguradora) => {
-          console.log("editar", aseguradora);
+
+          setAseguradoraAEditar(
+            aseguradora,
+          );
+
         },
+
 
         onCambiarEstado: (aseguradora) => {
-          console.log("cambiar estado", aseguradora);
+
+          sileo.action({
+
+            title: aseguradora.activa
+              ? "Desactivar aseguradora"
+              : "Activar aseguradora",
+
+            description:
+              aseguradora.activa
+                ? `¿Desactivar ${aseguradora.nombre}?`
+                : `¿Activar ${aseguradora.nombre}?`,
+
+
+            button: {
+
+              title: aseguradora.activa
+                ? "Desactivar"
+                : "Activar",
+
+
+              onClick: async () => {
+
+                await handleCambiarEstado(
+                  aseguradora,
+                );
+
+              },
+
+            },
+
+          });
+
         },
+
       }),
 
-    [],
+    [handleCambiarEstado],
+
   );
+
+
 
   const activas = useMemo(
-    () => aseguradoras.filter((a) => a.activa).length,
+    () =>
+      aseguradoras.filter(
+        (a) => a.activa,
+      ).length,
 
     [aseguradoras],
   );
+
+
 
   const inactivas = useMemo(
-    () => aseguradoras.filter((a) => !a.activa).length,
+    () =>
+      aseguradoras.filter(
+        (a) => !a.activa,
+      ).length,
 
     [aseguradoras],
   );
 
+
+
   const creadasEsteMes = useMemo(() => {
+
     const now = new Date();
 
-    return aseguradoras.filter((aseguradora) => {
-      const fecha = new Date(aseguradora.created_at);
+    return aseguradoras.filter(
+      (aseguradora) => {
 
-      return (
-        fecha.getMonth() === now.getMonth() &&
-        fecha.getFullYear() === now.getFullYear()
-      );
-    }).length;
+        const fecha =
+          new Date(
+            aseguradora.created_at,
+          );
+
+
+        return (
+          fecha.getMonth() === now.getMonth() &&
+          fecha.getFullYear() === now.getFullYear()
+        );
+
+      },
+
+    ).length;
+
   }, [aseguradoras]);
 
-  const filteredAseguradoras = useMemo(() => {
-    const q = search.toLowerCase();
 
-    let result = aseguradoras.filter(
-      (aseguradora) =>
-        aseguradora.nombre.toLowerCase().includes(q) ||
-        (aseguradora.cuit ?? "").toLowerCase().includes(q) ||
-        (aseguradora.telefono ?? "").toLowerCase().includes(q),
-    );
 
-    const estado = activeFilters.estado ?? "todas";
+  const filteredAseguradoras =
+    useMemo(() => {
 
-    if (estado === "activas") {
-      result = result.filter((a) => a.activa);
+      const q =
+        search.toLowerCase();
+
+
+      let result =
+        aseguradoras.filter(
+          (aseguradora) =>
+
+            aseguradora.nombre
+              .toLowerCase()
+              .includes(q) ||
+
+            (aseguradora.cuit ?? "")
+              .toLowerCase()
+              .includes(q) ||
+
+            (aseguradora.telefono ?? "")
+              .toLowerCase()
+              .includes(q),
+
+        );
+
+
+      const estado =
+        activeFilters.estado ?? "todas";
+
+
+      if (estado === "activas") {
+        result =
+          result.filter(
+            (a) => a.activa,
+          );
+      }
+
+
+      if (estado === "inactivas") {
+        result =
+          result.filter(
+            (a) => !a.activa,
+          );
+      }
+
+
+      if (sortBy === "nombre") {
+
+        result.sort(
+          (a,b) =>
+            a.nombre.localeCompare(
+              b.nombre,
+            ),
+        );
+
+      }
+
+
+      if (sortBy === "reciente") {
+
+        result.sort(
+          (a,b) =>
+            new Date(
+              b.created_at,
+            ).getTime() -
+            new Date(
+              a.created_at,
+            ).getTime(),
+        );
+
+      }
+
+
+      return result;
+
+
+    },[
+      aseguradoras,
+      search,
+      sortBy,
+      activeFilters,
+    ]);
+
+
+
+  const handleCreate = async (
+    dto:any,
+  ) => {
+
+    try {
+
+      await addAseguradora(dto);
+
+
+      sileo.success({
+        title:"Aseguradora creada",
+        description:
+          "La aseguradora fue registrada correctamente.",
+      });
+
+
+      setOpen(false);
+
+
+    } catch(error) {
+
+      console.error(error);
+
+      sileo.error({
+        title:"Error",
+        description:
+          "No se pudo crear la aseguradora.",
+      });
+
     }
 
-    if (estado === "inactivas") {
-      result = result.filter((a) => !a.activa);
-    }
+  };
 
-    if (sortBy === "nombre") {
-      result.sort((a, b) => a.nombre.localeCompare(b.nombre));
-    }
 
-    if (sortBy === "reciente") {
-      result.sort(
-        (a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+
+  const handleUpdate = async (
+    id:string,
+    dto:any,
+  ) => {
+
+    try {
+
+      await editAseguradora(
+        id,
+        dto,
       );
+
+
+      sileo.success({
+        title:"Aseguradora actualizada",
+        description:
+          "Los datos fueron modificados correctamente.",
+      });
+
+
+      setAseguradoraAEditar(null);
+
+
+    } catch(error) {
+
+      console.error(error);
+
+      sileo.error({
+        title:"Error",
+        description:
+          "No se pudo actualizar la aseguradora.",
+      });
+
     }
 
-    return result;
-  }, [aseguradoras, search, sortBy, activeFilters]);
+  };
+
+
+
+  const handleCloseModal = () => {
+
+    setOpen(false);
+    setAseguradoraAEditar(null);
+
+  };
+
+
 
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <p className="text-muted-foreground">Cargando aseguradoras...</p>
+        <p className="text-muted-foreground">
+          Cargando aseguradoras...
+        </p>
       </div>
     );
   }
 
+
+
   return (
     <>
       <div className="space-y-5">
+
         <PageHeader
           title="Compañías de Seguros"
           description="Gestión de aseguradoras del taller"
           actions={
-            <Button onClick={() => setOpen(true)}>
-              <Plus className="mr-2 size-4" />
+            <Button
+              onClick={() => setOpen(true)}
+            >
+              <Plus className="mr-2 size-4"/>
               Nueva Aseguradora
             </Button>
           }
         />
 
+
         <StatsGrid>
+
           <StatCard
-            icon={<Shield className="size-5" />}
+            icon={<Shield className="size-5"/>}
             iconClass="theme-seguro bg-primary/10 text-primary"
             label="Aseguradoras"
             value={aseguradoras.length}
             footer={`+${creadasEsteMes} este mes`}
           />
 
+
           <StatCard
-            icon={<ShieldCheck className="size-5" />}
+            icon={<ShieldCheck className="size-5"/>}
             iconClass="bg-green-100 text-green-700"
             label="Activas"
             value={activas}
             footer="Disponibles para trabajos"
           />
 
+
           <StatCard
-            icon={<ShieldOff className="size-5" />}
+            icon={<ShieldOff className="size-5"/>}
             iconClass="bg-amber-100 text-amber-700"
             label="Inactivas"
             value={inactivas}
             footer={`${Math.round(
-              aseguradoras.length ? (inactivas / aseguradoras.length) * 100 : 0,
+              aseguradoras.length
+                ? (inactivas / aseguradoras.length) * 100
+                : 0,
             )}% del total`}
-            trend="neutral"
           />
+
         </StatsGrid>
+
+
 
         <DataFilters
           {...filterProps}
@@ -211,19 +513,50 @@ export function Seguros() {
           filterGroups={FILTER_GROUPS}
         />
 
+
+
         <DataTable
           data={filteredAseguradoras}
           columns={columns}
-          getRowKey={(aseguradora) => aseguradora.id}
+          getRowKey={(a)=>a.id}
           loading={loading}
           headerColorClass="theme-seguro text-primary"
           emptyTitle="No hay aseguradoras registradas"
           emptyDescription="Intentá con otra búsqueda o agregá una nueva aseguradora."
-          emptyIcon={<Shield className="size-14 text-slate-300" />}
+          emptyIcon={
+            <Shield className="size-14 text-slate-300"/>
+          }
         />
+
       </div>
 
-      <ModalAseguradora open={open} onClose={() => setOpen(false)} />
+
+
+      <ModalAseguradora
+
+        open={
+          open ||
+          !!aseguradoraAEditar
+        }
+
+        aseguradora={
+          aseguradoraAEditar
+        }
+
+        onClose={
+          handleCloseModal
+        }
+
+        onCreated={
+          handleCreate
+        }
+
+        onUpdated={
+          handleUpdate
+        }
+
+      />
+
     </>
   );
 }

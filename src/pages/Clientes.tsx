@@ -17,6 +17,8 @@ import { DataTable } from "@/components/common/DataTable";
 
 import { createClienteColumns } from "@/components/clientes/ClienteColumns";
 
+import type { Cliente } from "@/types";
+
 import { sileo } from "sileo";
 
 const SORT_OPTIONS = [
@@ -44,6 +46,8 @@ export function Clientes() {
     error,
     loading: loadingClientes,
     fetchClientes,
+    addCliente,
+    editCliente,
   } = useClientes();
 
   const {
@@ -53,15 +57,11 @@ export function Clientes() {
     fetchVehiculos,
   } = useVehiculos();
 
-  const [openClienteModal, setOpenClienteModal] =
-    useState(false);
+  const [openClienteModal, setOpenClienteModal] = useState(false);
 
-  const {
-    search,
-    sortBy,
-    activeFilters,
-    filterProps,
-  } = useDataFilters({
+  const [clienteAEditar, setClienteAEditar] = useState<Cliente | null>(null);
+
+  const { search, sortBy, activeFilters, filterProps } = useDataFilters({
     defaultSort: "nombre",
     defaultFilters: { estado: "todos" },
   });
@@ -87,17 +87,14 @@ export function Clientes() {
     }
   }, [error, errorVehiculos]);
 
-  const loading =
-    loadingClientes ||
-    loadingVehiculos;
+  const loading = loadingClientes || loadingVehiculos;
 
   const vehiculosCount = useMemo(() => {
     return vehiculos.reduce(
       (acc, vehiculo) => {
         if (!vehiculo.cliente_id) return acc;
 
-        acc[vehiculo.cliente_id] =
-          (acc[vehiculo.cliente_id] ?? 0) + 1;
+        acc[vehiculo.cliente_id] = (acc[vehiculo.cliente_id] ?? 0) + 1;
 
         return acc;
       },
@@ -114,23 +111,23 @@ export function Clientes() {
           navigate(`/clientes/${cliente.id}`);
         },
 
+        onEditar: (cliente) => {
+          setClienteAEditar(cliente);
+        },
+
         onNuevoVehiculo: (cliente) => {
-          console.log(
-            "nuevo vehiculo",
-            cliente.id,
-          );
+          console.log("nuevo vehiculo", cliente.id);
         },
       }),
+
     [navigate, vehiculosCount],
   );
 
   const totalVehiculos = vehiculos.length;
 
   const sinVehiculo = useMemo(
-    () =>
-      clientes.filter(
-        (c) => !vehiculosCount[c.id],
-      ).length,
+    () => clientes.filter((c) => !vehiculosCount[c.id]).length,
+
     [clientes, vehiculosCount],
   );
 
@@ -163,70 +160,97 @@ export function Clientes() {
   const filteredClientes = useMemo(() => {
     const q = search.toLowerCase();
 
-    const estadoFilter =
-      activeFilters.estado ?? "todos";
+    const estadoFilter = activeFilters.estado ?? "todos";
 
     let result = clientes.filter(
       (cliente) =>
-        cliente.nombre
-          .toLowerCase()
-          .includes(q) ||
-        (cliente.telefono ?? "")
-          .toLowerCase()
-          .includes(q),
+        cliente.nombre.toLowerCase().includes(q) ||
+        (cliente.telefono ?? "").toLowerCase().includes(q),
     );
 
     if (estadoFilter === "con-vehiculo") {
       result = result.filter(
-        (cliente) =>
-          (vehiculosCount[cliente.id] ?? 0) > 0,
+        (cliente) => (vehiculosCount[cliente.id] ?? 0) > 0,
       );
     }
 
     if (estadoFilter === "sin-vehiculo") {
-      result = result.filter(
-        (cliente) =>
-          !vehiculosCount[cliente.id],
-      );
+      result = result.filter((cliente) => !vehiculosCount[cliente.id]);
     }
 
     if (sortBy === "nombre") {
-      result.sort((a, b) =>
-        a.nombre.localeCompare(b.nombre),
-      );
+      result.sort((a, b) => a.nombre.localeCompare(b.nombre));
     }
 
     if (sortBy === "vehiculos") {
       result.sort(
-        (a, b) =>
-          (vehiculosCount[b.id] ?? 0) -
-          (vehiculosCount[a.id] ?? 0),
+        (a, b) => (vehiculosCount[b.id] ?? 0) - (vehiculosCount[a.id] ?? 0),
       );
     }
 
     if (sortBy === "reciente") {
       result.sort(
         (a, b) =>
-          new Date(b.created_at).getTime() -
-          new Date(a.created_at).getTime(),
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
       );
     }
 
     return result;
-  }, [
-    clientes,
-    search,
-    sortBy,
-    activeFilters,
-    vehiculosCount,
-  ]);
+  }, [clientes, search, sortBy, activeFilters, vehiculosCount]);
+
+  const handleCreate = async (dto: any) => {
+    try {
+      await addCliente(dto);
+
+      await fetchClientes();
+
+      sileo.success({
+        title: "Cliente creado",
+        description: "El cliente fue registrado correctamente.",
+      });
+
+      setOpenClienteModal(false);
+    } catch (error) {
+      console.error(error);
+
+      sileo.error({
+        title: "Error",
+        description: "No se pudo registrar el cliente.",
+      });
+    }
+  };
+
+  const handleUpdate = async (id: string, dto: any) => {
+    try {
+      await editCliente(id, dto);
+
+      await fetchClientes();
+
+      sileo.success({
+        title: "Cliente actualizado",
+        description: "Los datos fueron modificados correctamente.",
+      });
+
+      setClienteAEditar(null);
+    } catch (error) {
+      console.error(error);
+
+      sileo.error({
+        title: "Error",
+        description: "No se pudo actualizar el cliente.",
+      });
+    }
+  };
+
+  const handleCloseModal = () => {
+    setOpenClienteModal(false);
+    setClienteAEditar(null);
+  };
 
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <p className="text-muted-foreground">
-          Cargando clientes...
-        </p>
+        <p className="text-muted-foreground">Cargando clientes...</p>
       </div>
     );
   }
@@ -238,11 +262,7 @@ export function Clientes() {
           title="Clientes"
           description="Gestión de clientes del taller"
           actions={
-            <Button
-              onClick={() =>
-                setOpenClienteModal(true)
-              }
-            >
+            <Button onClick={() => setOpenClienteModal(true)}>
               <Plus className="mr-2 size-4" />
               Nuevo Cliente
             </Button>
@@ -272,11 +292,7 @@ export function Clientes() {
             label="Sin vehículo"
             value={sinVehiculo}
             footer={`${Math.round(
-              clientes.length
-                ? (sinVehiculo /
-                    clientes.length) *
-                    100
-                : 0,
+              clientes.length ? (sinVehiculo / clientes.length) * 100 : 0,
             )}% del total`}
             trend="neutral"
           />
@@ -292,38 +308,22 @@ export function Clientes() {
         <DataTable
           data={filteredClientes}
           columns={columns}
-          getRowKey={(cliente) =>
-            cliente.id
-          }
+          getRowKey={(cliente) => cliente.id}
           loading={loading}
           headerColorClass="theme-cliente text-primary"
           emptyTitle="No se encontraron clientes"
           emptyDescription="Intentá con otra búsqueda o creá un nuevo cliente."
-          emptyIcon={
-            <Users className="size-14 text-slate-300" />
-          }
+          emptyIcon={<Users className="size-14 text-slate-300" />}
         />
       </div>
 
       <ModalCliente
-        open={openClienteModal}
-        onClose={() =>
-          setOpenClienteModal(false)
-        }
-        onCreated={async () => {
-          await fetchClientes();
-
-          sileo.success({
-            title: "Cliente creado",
-            description:
-              "El cliente fue registrado correctamente.",
-          });
-
-          setOpenClienteModal(false);
-        }}
+        open={openClienteModal || !!clienteAEditar}
+        cliente={clienteAEditar}
+        onClose={handleCloseModal}
+        onCreated={handleCreate}
+        onUpdated={handleUpdate}
       />
     </>
   );
 }
-
-

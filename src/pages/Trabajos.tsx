@@ -58,6 +58,14 @@ const KANBAN_FILTER_GROUPS = [
       { value: "Seguro", label: "Seguro" },
     ],
   },
+  {
+    id: "pago",
+    options: [
+      { value: "todos", label: "Todos" },
+      { value: "pagado", label: "Pagada" },
+      { value: "pendiente", label: "Pendiente de pago" },
+    ],
+  },
 ];
 
 // ─────────────────────────────────────────────
@@ -75,6 +83,7 @@ export function Trabajos() {
     defaultFilters: {
       estado: "todos",
       tipo: "todos",
+      pago: "todos",
     },
   });
 
@@ -129,6 +138,12 @@ export function Trabajos() {
 
     if (tipo !== "todos") {
       result = result.filter((t) => t.tipo === tipo);
+    }
+
+    const pago = activeFilters.pago ?? "todos";
+
+    if (pago !== "todos") {
+      result = result.filter((t) => (pago === "pagado" ? t.pagado : !t.pagado));
     }
 
     if (sortBy === "reciente") {

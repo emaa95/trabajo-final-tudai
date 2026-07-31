@@ -43,6 +43,7 @@ import { sileo } from "sileo";
 import { TrabajoSolicitadoCard } from "./editables/TrabajoSolicitadoCard";
 import { TareasCard } from "./editables/TareasCard";
 import { useTareas } from "@/hooks/useTareas";
+import { useAuth } from "@/hooks/useAuth";
 
 export function TrabajoDetalle() {
   const { id } = useParams();
@@ -51,12 +52,19 @@ export function TrabajoDetalle() {
     useTrabajos();
   const { addTarea, updateTarea, removeTarea } = useTareas();
 
+  const { currentUser } = useAuth();
+
+const esAdmin = currentUser?.empleado?.is_admin === true;
+
   const [estadoActual, setEstadoActual] = useState<EstadoTrabajo>("Pendiente");
-  const [prioridadActual, setPrioridadActual] = useState<PrioridadTrabajo | undefined>();
+  const [prioridadActual, setPrioridadActual] = useState<
+    PrioridadTrabajo | undefined
+  >();
   const [showPresupuesto, setShowPresupuesto] = useState(false);
   const [showService, setShowService] = useState(false);
   const [editando, setEditando] = useState(false);
   const [draft, setDraft] = useState<TrabajoDetalleDraft | null>(null);
+  const [pagadoActual, setPagadoActual] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -159,6 +167,7 @@ export function TrabajoDetalle() {
 
     setEstadoActual(trabajo.estado);
     setPrioridadActual(trabajo.prioridad);
+    setPagadoActual(trabajo.pagado);
   }, [trabajo]);
 
   const handleActualizarPrioridad = async () => {
@@ -188,6 +197,58 @@ export function TrabajoDetalle() {
         description: "No se pudo actualizar la prioridad.",
       });
     }
+  };
+
+  const handleActualizarPago = async () => {
+    if (!trabajo) return;
+
+    try {
+      const nuevoEstado = !pagadoActual;
+
+      await updateTrabajo(trabajo.id, {
+        pagado: nuevoEstado,
+      });
+
+      setPagadoActual(nuevoEstado);
+
+      setDraft((prev) =>
+        prev
+          ? {
+              ...prev,
+              pagado: nuevoEstado,
+            }
+          : prev,
+      );
+
+      sileo.success({
+        title: "Estado de pago actualizado",
+        description: nuevoEstado
+          ? "La orden fue marcada como pagada."
+          : "La orden fue marcada como pendiente de pago.",
+      });
+    } catch {
+      sileo.error({
+        title: "Error",
+        description: "No se pudo actualizar el estado de pago.",
+      });
+    }
+  };
+
+  const confirmarActualizarPago = () => {
+    if (!trabajo) return;
+
+    sileo.action({
+      title: pagadoActual
+        ? "¿Marcar como pendiente de pago?"
+        : "¿Marcar como pagada?",
+      description: pagadoActual
+        ? "La orden volverá a figurar como pendiente de pago."
+        : "Esta acción indica que el taller recibió el pago de la orden.",
+      button: {
+        title: pagadoActual ? "Marcar como pendiente" : "Marcar como pagada",
+        onClick: handleActualizarPago,
+      },
+    });
   };
 
   const handleCancelarEdicion = () => {
@@ -367,6 +428,13 @@ export function TrabajoDetalle() {
                 • {trabajo.prioridad}
               </span>
             )}
+            <span
+              className={`text-sm font-medium ${
+                trabajo.pagado ? "text-green-300" : "text-amber-300"
+              }`}
+            >
+              • {pagadoActual ? "Pagada" : "Pendiente de pago"}
+            </span>
           </p>
         </div>
       </div>
@@ -523,7 +591,9 @@ export function TrabajoDetalle() {
 
               <Button
                 className="w-full bg-blue-600 hover:bg-blue-700"
-                disabled={!permisos.editarEstado || estadoActual === trabajo.estado}
+                disabled={
+                  !permisos.editarEstado || estadoActual === trabajo.estado
+                }
                 onClick={handleActualizarEstado}
               >
                 <CheckCircle className="mr-2" />
@@ -562,11 +632,12 @@ export function TrabajoDetalle() {
                 </p>
               )}
 
-              {permisos.editarPrioridad && prioridadActual !== trabajo.prioridad && (
-                <p className="text-xs text-amber-600">
-                  Hay cambios sin guardar
-                </p>
-              )}
+              {permisos.editarPrioridad &&
+                prioridadActual !== trabajo.prioridad && (
+                  <p className="text-xs text-amber-600">
+                    Hay cambios sin guardar
+                  </p>
+                )}
 
               <Button
                 className="w-full bg-amber-600 hover:bg-amber-700"
@@ -588,8 +659,8 @@ export function TrabajoDetalle() {
             </CardHeader>
 
             <CardContent className="space-y-2">
-              {permisos.editarOrden && (
-                !editando ? (
+              {permisos.editarOrden &&
+                (!editando ? (
                   <Button
                     variant="outline"
                     className="w-full justify-start"
@@ -616,19 +687,31 @@ export function TrabajoDetalle() {
                       Cancelar edición
                     </Button>
                   </>
-                )
-              )}
+                ))}
 
               <Button
                 variant="outline"
                 className="w-full justify-start"
-                disabled={!permisos.generarPresupuesto}
+                disabled={!esAdmin || !permisos.generarPresupuesto}
                 onClick={() => setShowPresupuesto(true)}
               >
                 <FileText className="mr-2 text-orange-500" />
                 Generar presupuesto
               </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={confirmarActualizarPago}
+                disabled={!esAdmin}
+              >
+                <CheckCircle
+                  className={`mr-2 ${
+                    pagadoActual ? "text-green-500" : "text-amber-500"
+                  }`}
+                />
 
+                {pagadoActual ? "Marcar como pendiente" : "Marcar como pagada"}
+              </Button>
               <Button
                 variant="outline"
                 className="w-full justify-start"
@@ -642,7 +725,7 @@ export function TrabajoDetalle() {
               <Button
                 variant="outline"
                 className="w-full justify-start"
-                disabled={!permisos.imprimir}
+                disabled={!esAdmin || !permisos.imprimir}
                 onClick={() => window.print()}
               >
                 <Printer className="mr-2 text-slate-500" />

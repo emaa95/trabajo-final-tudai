@@ -1,5 +1,10 @@
 import { create } from "zustand";
-import type { Vehiculo } from "@/types";
+
+import type {
+  Vehiculo,
+  CreateVehiculoDto,
+  UpdateVehiculoDto,
+} from "@/types";
 
 import {
   getVehiculos,
@@ -40,12 +45,12 @@ type VehiculosState = {
 
 
   addVehiculo: (
-    data: any
-  ) => Promise<void>;
+    data: CreateVehiculoDto
+  ) => Promise<Vehiculo>;
 
   editVehiculo: (
     id: string,
-    data: any
+    data: UpdateVehiculoDto
   ) => Promise<void>;
 
   removeVehiculo: (
@@ -66,7 +71,6 @@ export const vehiculosStore = create<VehiculosState>((set, get) => ({
   loading: false,
 
   error: null,
-
 
 
   fetchVehiculos: async () => {
@@ -97,7 +101,6 @@ export const vehiculosStore = create<VehiculosState>((set, get) => ({
     }
 
   },
-
 
 
   fetchVehiculoById: async (id) => {
@@ -131,24 +134,35 @@ export const vehiculosStore = create<VehiculosState>((set, get) => ({
   },
 
 
-
   fetchVehiculosByCliente: async (clienteId) => {
 
     set({
       loading: true,
+      error: null,
     });
 
 
-    const data = await getVehiculosByCliente(clienteId);
+    try {
+
+      const data = await getVehiculosByCliente(clienteId);
 
 
-    set({
-      vehiculosByCliente: data,
-      loading: false,
-    });
+      set({
+        vehiculosByCliente: data,
+        loading: false,
+      });
+
+
+    } catch {
+
+      set({
+        error: "Error al obtener vehículos del cliente",
+        loading: false,
+      });
+
+    }
 
   },
-
 
 
   clearVehiculoSeleccionado: () =>
@@ -157,22 +171,21 @@ export const vehiculosStore = create<VehiculosState>((set, get) => ({
     }),
 
 
-
   clearVehiculosByCliente: () =>
     set({
       vehiculosByCliente: [],
     }),
 
 
-
   addVehiculo: async (data) => {
 
-    await crearVehiculo(data);
+    const vehiculo = await crearVehiculo(data);
 
     await get().fetchVehiculos();
 
-  },
+    return vehiculo;
 
+  },
 
 
   editVehiculo: async (id, data) => {
@@ -182,7 +195,6 @@ export const vehiculosStore = create<VehiculosState>((set, get) => ({
     await get().fetchVehiculos();
 
   },
-
 
 
   removeVehiculo: async (id) => {

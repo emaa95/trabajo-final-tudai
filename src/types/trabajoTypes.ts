@@ -317,6 +317,8 @@ export interface Trabajo {
 
   notas?: string;
 
+  pagado: boolean;
+
 }
 
 export interface CreateTrabajoPayload {
@@ -431,6 +433,7 @@ export interface TrabajoDetalle {
   asignado_a?: string;
   trabajos_solicitados: TrabajoSolicitado[];
   service?: Service | null;
+  pagado: boolean;
   vehiculo: {
     id: string;
     patente: string;

@@ -24,11 +24,15 @@ export async function findClienteById(
     .single();
 }
 
-export async function getClienteByDocumento(documento: string) {
+export async function getClienteByDocumento(
+  documento: string,
+  taller_id: string
+) {
   const { data, error } = await supabase
     .from("CLIENTES")
     .select("*")
     .eq("documento", documento)
+    .eq("taller_id", taller_id)
     .maybeSingle();
 
   return { data, error };

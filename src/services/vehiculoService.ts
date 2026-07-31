@@ -72,7 +72,7 @@ export async function getVehiculosByCliente(
 
 export async function crearVehiculo(
   payload: CreateVehiculoDto
-): Promise<void> {
+): Promise<Vehiculo> {
   if (!payload.patente?.trim()) {
     throw new Error("La patente es obligatoria");
   }
@@ -88,7 +88,7 @@ export async function crearVehiculo(
     empleado.taller_id
   );
 
-  const { error: createError } = await createVehiculo(
+  const { data, error: createError } = await createVehiculo(
     vehiculoNormalizado
   );
 
@@ -96,6 +96,12 @@ export async function crearVehiculo(
     console.error("[VEHICULOS_SERVICE][CREATE]", createError);
     manejarErrorSupabase(createError);
   }
+
+  if (!data) {
+    throw new Error("No se pudo crear el vehículo");
+  }
+
+  return data;
 }
 
 // ======================================================

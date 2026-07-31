@@ -120,22 +120,37 @@ function TrabajoCard({ trabajo, index }: TrabajoCardProps) {
               )}
 
               <div className="flex items-center justify-between mt-3">
-                <TipoBadge tipo={trabajo.tipo} />
+  <div className="flex flex-col gap-1">
+    <TipoBadge tipo={trabajo.tipo} />
 
-                <span
-                  className={`
-                    text-[11px]
-                    font-medium
-                    ${
-                      diasEnTaller >= 10
-                        ? "text-amber-600"
-                        : "text-slate-500"
-                    }
-                  `}
-                >
-                  {getDiasEnTaller(trabajo.fecha_ingreso)}
-                </span>
-              </div>
+    <span
+      className={`
+        inline-flex w-fit items-center px-2 py-1 rounded-full text-[11px] font-medium
+        ${
+          trabajo.pagado
+            ? "bg-green-50 text-green-700"
+            : "bg-amber-50 text-amber-700"
+        }
+      `}
+    >
+      {trabajo.pagado ? "Pagada" : "Pendiente de pago"}
+    </span>
+  </div>
+
+  <span
+    className={`
+      text-[11px]
+      font-medium
+      ${
+        diasEnTaller >= 10
+          ? "text-amber-600"
+          : "text-slate-500"
+      }
+    `}
+  >
+    {getDiasEnTaller(trabajo.fecha_ingreso)}
+  </span>
+</div>
             </div>
           </Link>
         </div>

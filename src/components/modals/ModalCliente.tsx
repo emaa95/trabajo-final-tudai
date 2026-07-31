@@ -1,8 +1,13 @@
 import { useEffect, useState } from "react";
-import { useClientes } from "@/hooks/useClientes";
-import type { ModalClienteProps, Cliente } from "@/types";
 
-import { Plus, User } from "lucide-react";
+import type {
+  CreateClienteDto,
+  ModalClienteProps,
+  UpdateClienteDto,
+} from "@/types";
+
+import { Pencil, Plus, User } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,8 +16,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
 import { FieldError } from "../forms/nuevoTrabajo/FieldError";
 
 const inputStyles =
@@ -27,10 +34,13 @@ type FormErrors = {
 
 export function ModalCliente({
   open,
+  cliente,
   onClose,
   onCreated,
+  onUpdated,
 }: ModalClienteProps) {
-  const { addCliente } = useClientes();
+
+  const isEditing = !!cliente;
 
   const [nombre, setNombre] = useState("");
   const [apellido, setApellido] = useState("");
@@ -38,19 +48,37 @@ export function ModalCliente({
   const [email, setEmail] = useState("");
   const [direccion, setDireccion] = useState("");
   const [documento, setDocumento] = useState("");
+
   const [tipoDocumento, setTipoDocumento] =
     useState<"DNI" | "CUIL" | "CUIT">("DNI");
 
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
 
+
   useEffect(() => {
     if (!open) {
       setLoading(false);
+      resetForm();
       setErrors({});
+      return;
+    }
+
+    if (cliente) {
+      setNombre(cliente.nombre ?? "");
+      setApellido(cliente.apellido ?? "");
+      setTelefono(cliente.telefono ?? "");
+      setEmail(cliente.email ?? "");
+      setDireccion(cliente.direccion ?? "");
+      setDocumento(cliente.documento ?? "");
+      setTipoDocumento(cliente.tipo_documento ?? "DNI");
+    } else {
       resetForm();
     }
-  }, [open]);
+
+    setErrors({});
+  }, [open, cliente]);
+
 
   const resetForm = () => {
     setNombre("");
@@ -62,138 +90,223 @@ export function ModalCliente({
     setTipoDocumento("DNI");
   };
 
+
   const handleClose = () => {
     setLoading(false);
-    setErrors({});
     resetForm();
+    setErrors({});
     onClose();
   };
+
 
   const handleSave = async () => {
     const newErrors: FormErrors = {};
 
-    if (!nombre.trim()) newErrors.nombre = "El nombre es obligatorio";
-    if (!apellido.trim()) newErrors.apellido = "El apellido es obligatorio";
-    if (!telefono.trim()) newErrors.telefono = "El teléfono es obligatorio";
-    if (!documento.trim()) newErrors.documento = "El documento es obligatorio";
+    if (!nombre.trim())
+      newErrors.nombre = "El nombre es obligatorio";
+
+    if (!apellido.trim())
+      newErrors.apellido = "El apellido es obligatorio";
+
+    if (!telefono.trim())
+      newErrors.telefono = "El teléfono es obligatorio";
+
+    if (!documento.trim())
+      newErrors.documento = "El documento es obligatorio";
+
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
 
+
     setLoading(true);
 
     try {
-      // 🔴 IMPORTANTE: necesitamos que addCliente devuelva el cliente creado
-      const clienteCreado: Cliente = await addCliente({
-        nombre: nombre.trim(),
-        apellido: apellido.trim(),
-        telefono: telefono.trim() || undefined,
-        email: email.trim() || undefined,
-        direccion: direccion.trim() || undefined,
-        documento: documento.trim(),
-        tipo_documento: tipoDocumento,
-      });
 
-      resetForm();
-      onClose();
+      if (isEditing && cliente) {
 
-      // ✅ ahora sí: pasamos el cliente al padre
-      onCreated?.(clienteCreado);
+        const dto: UpdateClienteDto = {
+          nombre: nombre.trim(),
+          apellido: apellido.trim(),
+          telefono: telefono.trim() || undefined,
+          email: email.trim() || undefined,
+          direccion: direccion.trim() || undefined,
+          documento: documento.trim(),
+          tipo_documento: tipoDocumento,
+        };
+
+        await onUpdated?.(cliente.id, dto);
+
+      } else {
+
+        const dto: CreateClienteDto = {
+          nombre: nombre.trim(),
+          apellido: apellido.trim(),
+          telefono: telefono.trim() || undefined,
+          email: email.trim() || undefined,
+          direccion: direccion.trim() || undefined,
+          documento: documento.trim(),
+          tipo_documento: tipoDocumento,
+        };
+
+        onCreated?.(dto);
+      }
+
+      handleClose();
+
     } catch (err) {
-      console.error(err);
+
+      console.error(
+        isEditing
+          ? "Error actualizando cliente:"
+          : "Error creando cliente:",
+        err
+      );
+
     } finally {
       setLoading(false);
     }
   };
 
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
       <DialogContent className="sm:max-w-md">
+
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <User className="size-4" />
-            Nuevo cliente
+            {isEditing ? (
+              <Pencil className="size-4" />
+            ) : (
+              <User className="size-4" />
+            )}
+
+            {isEditing
+              ? "Editar cliente"
+              : "Nuevo cliente"}
           </DialogTitle>
         </DialogHeader>
 
+
         <div className="space-y-4 py-2">
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
             <div className="space-y-2">
               <Label>Nombre *</Label>
+
               <Input
                 value={nombre}
                 onChange={(e) => {
                   setNombre(e.target.value);
-                  if (errors.nombre)
-                    setErrors((p) => ({ ...p, nombre: undefined }));
+
+                  if (errors.nombre) {
+                    setErrors((p) => ({
+                      ...p,
+                      nombre: undefined,
+                    }));
+                  }
                 }}
                 className={`${inputStyles} ${
                   errors.nombre ? "border-destructive" : ""
                 }`}
               />
+
               <FieldError error={errors.nombre} />
             </div>
 
+
             <div className="space-y-2">
               <Label>Apellido *</Label>
+
               <Input
                 value={apellido}
                 onChange={(e) => {
                   setApellido(e.target.value);
-                  if (errors.apellido)
-                    setErrors((p) => ({ ...p, apellido: undefined }));
+
+                  if (errors.apellido) {
+                    setErrors((p) => ({
+                      ...p,
+                      apellido: undefined,
+                    }));
+                  }
                 }}
                 className={`${inputStyles} ${
                   errors.apellido ? "border-destructive" : ""
                 }`}
               />
+
               <FieldError error={errors.apellido} />
             </div>
+
           </div>
+
 
           <div className="space-y-2">
             <Label>Teléfono *</Label>
+
             <Input
               value={telefono}
               onChange={(e) => {
                 setTelefono(e.target.value);
-                if (errors.telefono)
-                  setErrors((p) => ({ ...p, telefono: undefined }));
+
+                if (errors.telefono) {
+                  setErrors((p) => ({
+                    ...p,
+                    telefono: undefined,
+                  }));
+                }
               }}
               className={`${inputStyles} ${
                 errors.telefono ? "border-destructive" : ""
               }`}
             />
+
             <FieldError error={errors.telefono} />
           </div>
 
+
           <div className="space-y-2">
             <Label>Email</Label>
+
             <Input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) =>
+                setEmail(e.target.value)
+              }
               className={inputStyles}
             />
           </div>
+
 
           <div className="space-y-2">
             <Label>Dirección</Label>
+
             <Input
               value={direccion}
-              onChange={(e) => setDireccion(e.target.value)}
+              onChange={(e) =>
+                setDireccion(e.target.value)
+              }
               className={inputStyles}
             />
           </div>
 
+
           <div className="space-y-2">
             <Label>Tipo de documento *</Label>
+
             <select
               value={tipoDocumento}
               onChange={(e) =>
-                setTipoDocumento(e.target.value as "DNI" | "CUIL" | "CUIT")
+                setTipoDocumento(
+                  e.target.value as
+                    | "DNI"
+                    | "CUIL"
+                    | "CUIT"
+                )
               }
               className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm"
             >
@@ -203,33 +316,66 @@ export function ModalCliente({
             </select>
           </div>
 
+
           <div className="space-y-2">
             <Label>Documento *</Label>
+
             <Input
               value={documento}
               onChange={(e) => {
                 setDocumento(e.target.value);
-                if (errors.documento)
-                  setErrors((p) => ({ ...p, documento: undefined }));
+
+                if (errors.documento) {
+                  setErrors((p) => ({
+                    ...p,
+                    documento: undefined,
+                  }));
+                }
               }}
               className={`${inputStyles} ${
                 errors.documento ? "border-destructive" : ""
               }`}
             />
+
             <FieldError error={errors.documento} />
           </div>
+
         </div>
 
+
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={handleClose} disabled={loading}>
+
+          <Button
+            variant="outline"
+            onClick={handleClose}
+            disabled={loading}
+          >
             Cancelar
           </Button>
 
-          <Button onClick={handleSave} disabled={loading}>
-            <Plus className="mr-2 size-4" />
-            {loading ? "Creando..." : "Crear cliente"}
+
+          <Button
+            onClick={handleSave}
+            disabled={loading}
+          >
+            {isEditing ? (
+              <Pencil className="mr-2 size-4" />
+            ) : (
+              <Plus className="mr-2 size-4" />
+            )}
+
+            {loading
+              ? isEditing
+                ? "Guardando..."
+                : "Creando..."
+              : isEditing
+                ? "Guardar cambios"
+                : "Crear cliente"}
+
           </Button>
+
         </DialogFooter>
+
       </DialogContent>
     </Dialog>
   );

@@ -5,7 +5,6 @@ export async function findAllAseguradoras() {
   return supabase
     .from('ASEGURADORAS')
     .select('*')
-    .eq('activa', true)
     .order('nombre', {
       ascending: true,
     });

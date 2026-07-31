@@ -23,7 +23,7 @@ export function PerfilHeader({
 
   return (
     <Card>
-      <CardHeader className="items-center">
+      <CardHeader className="flex flex-col items-center">
         <Avatar className="size-24">
           <AvatarFallback className="text-2xl">
             {initials}

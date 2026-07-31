@@ -1,171 +1,445 @@
-import { useState } from 'react';
+import { useEffect, useState } from "react";
+
+import type {
+  Aseguradora,
+  CreateAseguradoraDto,
+  ModalAseguradoraProps,
+  UpdateAseguradoraDto,
+} from "@/types";
+
+import { Pencil, Plus, Shield } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
-import { useAseguradoras } from '@/hooks/useAseguradoras';
+import { FieldError } from "../forms/nuevoTrabajo/FieldError";
 
-interface ModalAseguradoraProps {
-  open: boolean;
-  onClose: () => void;
+const inputStyles =
+  "transition-all focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2";
+
+
+type FormErrors = {
+  nombre?: string;
+};
+
+
+interface Props extends ModalAseguradoraProps {
+  aseguradora?: Aseguradora | null;
 }
+
 
 export function ModalAseguradora({
   open,
+  aseguradora,
   onClose,
-}: ModalAseguradoraProps) {
-  const { addAseguradora } = useAseguradoras();
+  onCreated,
+  onUpdated,
+}: Props) {
+
+  const isEditing = !!aseguradora;
+
+
+  const [nombre, setNombre] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [email, setEmail] = useState("");
+  const [direccion, setDireccion] = useState("");
+  const [cuit, setCuit] = useState("");
+
 
   const [loading, setLoading] = useState(false);
 
-  const [form, setForm] = useState({
-    nombre: '',
-    telefono: '',
-    email: '',
-    direccion: '',
-    cuit: '',
-  });
+  const [errors, setErrors] =
+    useState<FormErrors>({});
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
+
+
+  useEffect(() => {
+
+    if (!open) {
+
+      setLoading(false);
+      resetForm();
+      setErrors({});
+
+      return;
+    }
+
+
+    if (aseguradora) {
+
+      setNombre(aseguradora.nombre ?? "");
+      setTelefono(aseguradora.telefono ?? "");
+      setEmail(aseguradora.email ?? "");
+      setDireccion(aseguradora.direccion ?? "");
+      setCuit(aseguradora.cuit ?? "");
+
+    } else {
+
+      resetForm();
+
+    }
+
+
+    setErrors({});
+
+  }, [open, aseguradora]);
+
+
+
+  const resetForm = () => {
+
+    setNombre("");
+    setTelefono("");
+    setEmail("");
+    setDireccion("");
+    setCuit("");
+
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
 
-    if (!form.nombre.trim()) return;
+
+  const handleClose = () => {
+
+    setLoading(false);
+    resetForm();
+    onClose();
+
+  };
+
+
+
+  const handleSave = async () => {
+
+    const newErrors: FormErrors = {};
+
+
+    if (!nombre.trim()) {
+      newErrors.nombre =
+        "Ingrese un nombre";
+    }
+
+
+    if (Object.keys(newErrors).length > 0) {
+
+      setErrors(newErrors);
+      return;
+
+    }
+
+
+
+    setLoading(true);
+
+
 
     try {
-      setLoading(true);
 
-      await addAseguradora({
-        nombre: form.nombre,
-        telefono: form.telefono || undefined,
-        email: form.email || undefined,
-        direccion: form.direccion || undefined,
-        cuit: form.cuit || undefined,
-      });
 
-      setForm({
-        nombre: '',
-        telefono: '',
-        email: '',
-        direccion: '',
-        cuit: '',
-      });
+      if (isEditing && aseguradora) {
 
-      onClose();
+
+        const dto: UpdateAseguradoraDto = {
+
+          nombre: nombre.trim(),
+
+          telefono:
+            telefono.trim() || undefined,
+
+          email:
+            email.trim() || undefined,
+
+          direccion:
+            direccion.trim() || undefined,
+
+          cuit:
+            cuit.trim() || undefined,
+
+        };
+
+
+        await onUpdated?.(
+          aseguradora.id,
+          dto,
+        );
+
+
+
+      } else {
+
+
+        const dto: CreateAseguradoraDto = {
+
+          nombre: nombre.trim(),
+
+          telefono:
+            telefono.trim() || undefined,
+
+          email:
+            email.trim() || undefined,
+
+          direccion:
+            direccion.trim() || undefined,
+
+          cuit:
+            cuit.trim() || undefined,
+
+        };
+
+
+        await onCreated(dto);
+
+      }
+
+
+
+      handleClose();
+
+
+    } catch (err) {
+
+      console.error(
+        isEditing
+          ? "Error actualizando aseguradora:"
+          : "Error creando aseguradora:",
+        err,
+      );
+
     } finally {
+
       setLoading(false);
+
     }
+
   };
 
+
+
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+
+    <Dialog
+      open={open}
+      onOpenChange={(v) =>
+        !v && handleClose()
+      }
+    >
+
+      <DialogContent
+        className="
+        sm:max-w-md
+        duration-300
+        data-[state=open]:animate-in
+        data-[state=closed]:animate-out
+        data-[state=open]:fade-in-0
+        data-[state=closed]:fade-out-0
+        data-[state=open]:zoom-in-[98%]
+        data-[state=closed]:zoom-out-[98%]
+        "
+      >
 
         <DialogHeader>
-          <DialogTitle>
-            Nueva Aseguradora
+
+          <DialogTitle className="flex items-center gap-2">
+
+            {isEditing ? (
+
+              <Pencil className="size-4" />
+
+            ) : (
+
+              <Shield className="size-4" />
+
+            )}
+
+
+            {isEditing
+              ? "Editar aseguradora"
+              : "Nueva aseguradora"}
+
           </DialogTitle>
+
         </DialogHeader>
 
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-4"
-        >
 
-          {/* NOMBRE */}
-          <div className="space-y-1">
-            <Label>Nombre *</Label>
+
+        <div className="space-y-4 py-2">
+
+
+          <div>
+
+            <Label>
+              Nombre *
+            </Label>
+
+
             <Input
-              name="nombre"
-              value={form.nombre}
-              onChange={handleChange}
-              placeholder="Ej: Sancor Seguros"
+              value={nombre}
+              onChange={(e) => {
+
+                setNombre(e.target.value);
+
+                if (errors.nombre) {
+
+                  setErrors((p) => ({
+                    ...p,
+                    nombre: undefined,
+                  }));
+
+                }
+
+              }}
+
+              className={inputStyles}
             />
+
+
+            <FieldError
+              error={errors.nombre}
+            />
+
           </div>
 
-          {/* CUIT */}
-          <div className="space-y-1">
-            <Label>CUIT</Label>
+
+
+          <div>
+
+            <Label>
+              CUIT
+            </Label>
+
             <Input
-              name="cuit"
-              value={form.cuit}
-              onChange={handleChange}
-              placeholder="XX-XXXXXXXX-X"
+              value={cuit}
+              onChange={(e) =>
+                setCuit(e.target.value)
+              }
+              className={inputStyles}
             />
+
           </div>
 
-          {/* TEL */}
-          <div className="space-y-1">
-            <Label>Teléfono</Label>
+
+
+          <div>
+
+            <Label>
+              Teléfono
+            </Label>
+
             <Input
-              name="telefono"
-              value={form.telefono}
-              onChange={handleChange}
-              placeholder="Ej: 3511234567"
+              value={telefono}
+              onChange={(e) =>
+                setTelefono(e.target.value)
+              }
+              className={inputStyles}
             />
+
           </div>
 
-          {/* EMAIL */}
-          <div className="space-y-1">
-            <Label>Email</Label>
+
+
+          <div>
+
+            <Label>
+              Email
+            </Label>
+
             <Input
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              placeholder="Ej: contacto@aseguradora.com"
+              type="email"
+              value={email}
+              onChange={(e) =>
+                setEmail(e.target.value)
+              }
+              className={inputStyles}
             />
+
           </div>
 
-          {/* DIRECCION */}
-          <div className="space-y-1">
-            <Label>Dirección</Label>
+
+
+          <div>
+
+            <Label>
+              Dirección
+            </Label>
+
             <Input
-              name="direccion"
-              value={form.direccion}
-              onChange={handleChange}
-              placeholder="Ej: Av. Colón 123"
+              value={direccion}
+              onChange={(e) =>
+                setDireccion(e.target.value)
+              }
+              className={inputStyles}
             />
-          </div>
-
-          {/* ACTIONS */}
-          <div className="flex justify-end gap-2 pt-2">
-
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={onClose}
-            >
-              Cancelar
-            </Button>
-
-            <Button
-              type="submit"
-              disabled={loading}
-            >
-              {loading ? 'Guardando...' : 'Crear'}
-            </Button>
 
           </div>
 
-        </form>
+
+        </div>
+
+
+
+        <DialogFooter>
+
+
+          <Button
+            variant="outline"
+            onClick={handleClose}
+            disabled={loading}
+          >
+
+            Cancelar
+
+          </Button>
+
+
+
+          <Button
+            onClick={handleSave}
+            disabled={loading}
+          >
+
+            {isEditing ? (
+
+              <Pencil className="mr-2 size-4" />
+
+            ) : (
+
+              <Plus className="mr-2 size-4" />
+
+            )}
+
+
+            {loading
+
+              ? isEditing
+                ? "Guardando..."
+                : "Creando..."
+
+              : isEditing
+                ? "Guardar cambios"
+                : "Crear aseguradora"
+
+            }
+
+
+          </Button>
+
+
+        </DialogFooter>
+
 
       </DialogContent>
+
+
     </Dialog>
+
   );
 }

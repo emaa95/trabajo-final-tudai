@@ -1,4 +1,4 @@
-import { User, Eye, Plus } from "lucide-react";
+import { User, Eye, Plus, Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -9,18 +9,20 @@ interface CreateClienteColumnsProps {
   vehiculosCount: Record<string, number>;
 
   onVerDetalle?: (cliente: Cliente) => void;
+  onEditar?: (cliente: Cliente) => void;
   onNuevoVehiculo?: (cliente: Cliente) => void;
 }
 
 export function createClienteColumns({
   vehiculosCount,
   onVerDetalle,
+  onEditar,
   onNuevoVehiculo,
 }: CreateClienteColumnsProps): DataTableColumn<Cliente>[] {
   return [
     {
-      key: "cliente",
-      header: "Cliente",
+      key: "nombre",
+      header: "Nombre",
 
       render: (cliente) => (
         <div className="flex items-center justify-center gap-2">
@@ -30,6 +32,26 @@ export function createClienteColumns({
             {cliente.nombre}
           </span>
         </div>
+      ),
+    },
+
+    {
+      key: "apellido",
+      header: "Apellido",
+
+      render: (cliente) =>
+        cliente.apellido || "-",
+    },
+
+    {
+      key: "documento",
+      header: "Documento",
+
+      render: (cliente) => (
+        <span>
+          {cliente.tipo_documento ?? "-"}{" "}
+          {cliente.documento ?? "-"}
+        </span>
       ),
     },
 
@@ -95,6 +117,17 @@ export function createClienteColumns({
             }
           >
             <Eye className="size-4 text-slate-600" />
+          </Button>
+
+          <Button
+            size="icon"
+            variant="ghost"
+            title="Editar cliente"
+            onClick={() =>
+              onEditar?.(cliente)
+            }
+          >
+            <Pencil className="size-4 text-slate-600" />
           </Button>
 
           <Button

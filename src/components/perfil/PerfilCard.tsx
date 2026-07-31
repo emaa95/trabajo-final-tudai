@@ -31,10 +31,6 @@ export function PerfilCard({
     empleado.apellido
   );
 
-  const [cargo, setCargo] = useState(
-    empleado.cargo
-  );
-
   const [loading, setLoading] =
     useState(false);
 
@@ -48,7 +44,6 @@ export function PerfilCard({
       console.log({
         nombre,
         apellido,
-        cargo,
       });
 
     } finally {
@@ -67,7 +62,6 @@ export function PerfilCard({
           Actualiza tus datos personales.
         </CardDescription>
       </CardHeader>
-
 
       <CardContent className="space-y-4">
 
@@ -96,18 +90,6 @@ export function PerfilCard({
 
 
         <div className="grid gap-2">
-          <label>Cargo</label>
-
-          <Input
-            value={cargo}
-            onChange={(e) =>
-              setCargo(e.target.value)
-            }
-          />
-        </div>
-
-
-        <div className="grid gap-2">
           <label>Email</label>
 
           <Input
@@ -116,9 +98,7 @@ export function PerfilCard({
           />
         </div>
 
-
       </CardContent>
-
 
       <CardFooter>
         <Button
@@ -130,7 +110,6 @@ export function PerfilCard({
             : "Guardar cambios"}
         </Button>
       </CardFooter>
-
     </Card>
   );
 }

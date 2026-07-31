@@ -13,7 +13,7 @@ import { sileo } from "sileo";
 
 import { trabajoSchema, type TrabajoFormData } from "@/schemas/trabajoSchema";
 
-import type { Cliente, Vehiculo, CreateTrabajoPayload } from "@/types";
+import type { CreateTrabajoPayload, CreateClienteDto, CreateVehiculoDto } from "@/types";
 
 import { ModalCliente } from "../../modals/ModalCliente";
 import { ModalVehiculo } from "../../modals/ModalVehiculo";
@@ -69,12 +69,13 @@ export function TrabajoFormV2() {
 
   const [modalVehiculoOpen, setModalVehiculoOpen] = useState(false);
 
-  const { clientes, fetchClientes } = useClientes();
+  const { clientes, fetchClientes , addCliente} = useClientes();
 
   const {
     vehiculos,
     vehiculosByCliente,
     fetchVehiculos,
+    addVehiculo,
     fetchVehiculosByCliente,
     clearVehiculosByCliente,
   } = useVehiculos();
@@ -125,8 +126,30 @@ export function TrabajoFormV2() {
 
   const tareasRealizadas = tareas.filter((tarea) => tarea.realizada).length;
 
-  const handleClienteCreado = (cliente: Cliente) => {
-    setValue("cliente_id", cliente.id, {
+  const handleVehiculoCreado = async (dto: CreateVehiculoDto) => {
+  try {
+    const vehiculoCreado = await addVehiculo(dto);
+
+    setValue("vehiculo_id", vehiculoCreado.id, {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
+
+    setModalVehiculoOpen(false);
+
+    if (clienteId) {
+      await fetchVehiculosByCliente(clienteId);
+    }
+  } catch (error) {
+    console.error("Error creando vehículo desde OT:", error);
+  }
+};
+
+  const handleNuevoClienteOT = async (dto: CreateClienteDto) => {
+  try {
+    const clienteCreado = await addCliente(dto);
+
+    setValue("cliente_id", clienteCreado.id, {
       shouldValidate: true,
       shouldDirty: true,
     });
@@ -138,20 +161,11 @@ export function TrabajoFormV2() {
     setModalClienteOpen(false);
 
     fetchClientes();
-  };
 
-  const handleVehiculoCreado = (vehiculo: Vehiculo) => {
-    setValue("vehiculo_id", vehiculo.id, {
-      shouldValidate: true,
-      shouldDirty: true,
-    });
-
-    setModalVehiculoOpen(false);
-
-    if (clienteId) {
-      fetchVehiculosByCliente(clienteId);
-    }
-  };
+  } catch (error) {
+    console.error("Error creando cliente desde OT:", error);
+  }
+};
 
   const handleNext = async () => {
     const fields = [...STEP_FIELDS[step]];
@@ -250,7 +264,7 @@ export function TrabajoFormV2() {
       <ModalCliente
         open={modalClienteOpen}
         onClose={() => setModalClienteOpen(false)}
-        onCreated={handleClienteCreado}
+        onCreated={handleNuevoClienteOT}
       />
 
       <ModalVehiculo

@@ -61,7 +61,6 @@ export async function crearCliente(
     throw new Error('El documento es obligatorio');
   }
 
-  // 🔥 MISMO PATRÓN QUE VEHÍCULOS
   const { data: empleado, error: empleadoError } =
     await getCurrentEmpleado();
 
@@ -69,8 +68,18 @@ export async function crearCliente(
     throw new Error('No se pudo obtener el empleado logueado');
   }
 
+ 
   const { data: clienteExistente, error: searchError } =
-    await getClienteByDocumento(payload.documento);
+    await getClienteByDocumento(
+      payload.documento.trim(),
+      empleado.taller_id
+    );
+    console.log("BUSQUEDA CLIENTE:", {
+  documento: payload.documento.trim(),
+  taller_id: empleado.taller_id,
+  clienteExistente,
+  searchError
+});
 
   if (searchError) {
     console.error('[CLIENTES_SERVICE][SEARCH]', searchError);
@@ -78,7 +87,7 @@ export async function crearCliente(
   }
 
   if (clienteExistente) {
-    throw new Error('Ya existe un cliente con ese documento');
+    throw new Error('Ya existe un cliente con ese documento en este taller');
   }
 
   const clienteNormalizado = normalizarCliente(

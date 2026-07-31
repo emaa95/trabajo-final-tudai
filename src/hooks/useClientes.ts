@@ -10,6 +10,7 @@ export function useClientes() {
     fetchClienteById,
     clearClienteSeleccionado,
     addCliente,
+    editCliente,
   } = clienteStore();
 
   return {
@@ -21,5 +22,6 @@ export function useClientes() {
     fetchClienteById,
     clearClienteSeleccionado,
     addCliente,
+    editCliente,
   };
 }
