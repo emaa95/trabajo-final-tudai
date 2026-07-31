@@ -252,13 +252,6 @@ export function TrabajoFormV2() {
     }
   };
 
-  const onInvalid = () => {
-    sileo.warning({
-      title: "Formulario incompleto",
-      description: "Revisá los campos marcados en rojo.",
-    });
-  };
-
   return (
     <FormProvider {...methods}>
       <ModalCliente
@@ -334,7 +327,7 @@ export function TrabajoFormV2() {
         </div>
 
         <form
-          onSubmit={handleSubmit(onSubmit, onInvalid)}
+          onSubmit={handleSubmit(onSubmit)}
           className="space-y-6"
         >
           {step === 1 && (
